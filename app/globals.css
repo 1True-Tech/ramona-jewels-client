@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+/* Root Variables */
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --font-playfair: 'Playfair Display', serif;
+
+  /* Colors */
+  --border: 0 0% 90%;
+  --input: 0 0% 96%;
+  --ring: 0 0% 80%;
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+
+  --primary: 45 100% 50%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 240 5% 20%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 215 20.2% 65.1%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+
+  /* Border Radius */
+  --radius: 0.5rem;
+}
+
+/* Font Families */
+body {
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Optional class if you need Playfair */
+.font-playfair {
+  font-family: var(--font-playfair), serif;
+}
+
+/* Color Utility Classes */
+.border {
+  border-color: hsl(var(--border));
+}
+.input {
+  background-color: hsl(var(--input));
+}
+.ring {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+.bg-gradient-hero {
+  background: rgb(255, 252, 235);
+}
+
+/* .bg-background {
+  background-color: hsl(var(--background));
+} */
+.text-foreground {
+  color: hsl(var(--foreground));
+}
+.bg-primary {
+  background-color: hsl(var(--primary));
+}
+
+.border-primary\/20 {
+  border-color: hsl(var(--primary) / 0.2);
+}
+
+.text-primary-foreground {
+  color: (var(--primary-foreground));
+}
+
+.text-primary{
+  color: hsl(var(--primary));
+}
+
+.text-muted-foreground {
+  color: hsl(var(--muted-foreground));
+}
+/* Repeat for secondary, destructive, muted, accent, popover, card... */
+
+/* Border Radius Utilities */
+.rounded-lg {
+  border-radius: var(--radius);
+}
+.rounded-md {
+  border-radius: calc(var(--radius) - 2px);
+}
+.rounded-sm {
+  border-radius: calc(var(--radius) - 4px);
+}
+
+.bg-background {
+  background-color: hsl(var(--background));
+}
+
+.bg-primary {
+  background-color: hsl(var(--primary));
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, gold 0%, orange 50%, #ff6b35 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #b8860b 0%, #daa520 50%, gold 100%);
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Accordion Animations */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+.accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+.accordion-up {
+  animation: accordion-up 0.2s ease-out;
+}
+
+/* Container Utility (centered with padding) */
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+/* Container Max Widths for Breakpoints */
+@media (min-width: 1536px) {
+  .container {
+    max-width: 1400px;
+  }
+}
+
+/* Dark Mode Utility Class */
+/* .dark body {
+  Define dark-mode overrides here
+} */
+
+
+/* @theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+} */
+
+/* @media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+} */
+
+/* body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+} */
