@@ -110,7 +110,7 @@ export function HeroSection() {
           >
             <div className="relative aspect-square lg:aspect-[6/5] rounded-2xl overflow-hidden jewelry-sparkle">
               <Image
-                src="/placeholder.svg?height=600&width=500&text=Luxury+Jewelry+Collection"
+                src="https://images.unsplash.com/photo-1599458350242-6052c0716ee5?q=80&w=2036&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                 alt="Luxury Jewelry & Perfume Collection"
                 fill
                 className="object-cover"

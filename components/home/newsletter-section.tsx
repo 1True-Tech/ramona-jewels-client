@@ -67,10 +67,10 @@ export function NewsletterSection() {
             placeholder="Enter your email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="flex-1 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/60"
+            className="flex-1 ring-2 ring-white outline-0 text-primary-foreground placeholder:text-primary-foreground"
             required
           />
-          <Button type="submit" variant="secondary" disabled={isLoading} className="group">
+          <Button type="submit" variant="secondary" disabled={isLoading} className="group bg-white">
             {isLoading ? (
               "Subscribing..."
             ) : (

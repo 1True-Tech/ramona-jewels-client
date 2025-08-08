@@ -37,7 +37,7 @@ export function Footer() {
   ]
 
   return (
-    <footer className="bg-gradient-to-br from-[#fffdf9] to-[#fffdfa] border-t border-primary/20 mt-16">
+    <footer className="bg-gradient-to-br from-[#fffdf9] to-[#fffdfa] border-t border-primary mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Brand */}
@@ -148,7 +148,7 @@ export function Footer() {
 
         <div className="border-t border-primary/20 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-muted-foreground text-sm text-center sm:text-left">
-            © {new Date().getFullYear()} Luxe Atelier. All rights reserved.
+            © {new Date().getFullYear()} Ramona. All rights reserved.
           </p>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <Link href="/privacy" className="hover:text-primary transition-colors">

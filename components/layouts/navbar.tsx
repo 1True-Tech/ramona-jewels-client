@@ -22,7 +22,7 @@ export function Navbar() {
     { name: "Home", href: "/" },
     { name: "Jewelry", href: "/jewelry" },
     { name: "Perfumes", href: "/perfumes" },
-    { name: "Collections", href: "/collections" },
+    { name: "Collections", href: "/products" },
     { name: "About", href: "/about" },
   ]
 
@@ -38,13 +38,13 @@ export function Navbar() {
               </div>
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold font-playfair gradient-text">Ramona Jewels</span>
+              <span className="text-xl font-bold font-playfair gradient-text whitespace-nowrap">Ramona Jewels</span>
               <span className="text-xs text-muted-foreground -mt-1">Jewelry & Fragrances</span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-8">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -60,7 +60,7 @@ export function Navbar() {
           </div>
 
           {/* Search Bar */}
-          <div className="hidden md:flex items-center space-x-4 flex-1 max-w-md mx-8">
+          <div className="hidden lg:flex items-center space-x-4 flex-1 max-w-md mx-8">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -94,7 +94,7 @@ export function Navbar() {
 
             {/* User Menu */}
             {user ? (
-              <div className="flex items-center space-x-2">
+              <div className="hidden md:flex items-center space-x-2">
                 <Link href={user.role === "admin" ? "/admin" : "/profile"}>
                   <Button variant="ghost" size="icon" className="hover:bg-primary/10">
                     <User className="h-5 w-5" />
@@ -148,12 +148,12 @@ export function Navbar() {
               </div>
 
               {/* Mobile Navigation */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`block px-3 py-2 text-base font-medium rounded-md transition-colors ${
+                    className={`block pr-3 py-2 text-base font-medium rounded-md transition-colors ${
                       pathname === item.href
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:text-primary hover:bg-accent"
@@ -163,11 +163,31 @@ export function Navbar() {
                     {item.name}
                   </Link>
                 ))}
+
+                {/* User Menu */}
+                {user ? (
+                  <div className={`flex md:hidden items-center space-x-2 mt-4 ${user ? "" : "hidden"}`}>
+                    <Button variant="ghost" onClick={logout} className="inline-flex md:hidden hover:bg-primary/10 h-9 w-full gradient-primary text-white text-md font-bold">
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <div className={`flex md:hidden items-center space-x-2 mt-4 ${user ? "" : "hidden"}`}>
+                    <Link href="/auth/login">
+                      <Button variant="ghost" className="hover:bg-primary/10">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/auth/register">
+                      <Button className="gradient-primary text-white border-0 hover:opacity-90">Sign Up</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Mobile Auth */}
               {!user && (
-                <div className="flex space-x-2 pt-4 border-t">
+                <div className="flex space-x-2 pt-4 border-t mt-2">
                   <Link href="/auth/login" className="flex-1">
                     <Button variant="outline" className="w-full bg-transparent border-primary/20">
                       Login

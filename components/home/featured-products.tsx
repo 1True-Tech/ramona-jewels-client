@@ -58,7 +58,7 @@ export function FeaturedProducts() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="flex justify-center mb-12"
         >
-          <div className="flex items-center space-x-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-2 rounded-full border border-primary/20">
+          <div className="flex items-center space-x-4 bg-gradient-to-r from-amber-50 to-orange-50 p-2 rounded-full border border-primary">
             {["All", "Jewelry", "Perfumes"].map((category) => (
               <Button
                 key={category}
