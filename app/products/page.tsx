@@ -89,7 +89,7 @@ export default function ProductsPage() {
           transition={{ delay: 0.1 }}
           className="flex justify-center mb-8"
         >
-          <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-2 rounded-full border border-primary/20">
+          <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-50 dark:to-orange-50 p-2 rounded-full border border-primary">
             <Button
               variant={selectedType === "all" ? "default" : "ghost"}
               size="sm"

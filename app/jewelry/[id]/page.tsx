@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Star, Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw, Plus, Minus, Gem, Award, Clock, Zap, Gift, MessageCircle, ChevronLeft, ChevronRight, Ruler, Palette, Info, Crown, SparklesIcon } from 'lucide-react'
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
-import { mockJewelry, type JewelryProduct } from "@/lib/product-data"
+import { mockJewelry } from "@/lib/product-data"
 import Link from "next/link"
 import { Navbar } from "@/components/layouts/navbar"
 import { ProductCard } from "@/components/products/product-card"
@@ -129,7 +129,7 @@ export default function JewelryDetailPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
         {/* Breadcrumb */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -154,7 +154,7 @@ export default function JewelryDetailPage() {
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Product Images */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 jewelry-sparkle group">
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 jewelry-sparkle group">
               <Image
                 src={product.images[selectedImage] || product.image}
                 alt={product.name}
@@ -167,7 +167,7 @@ export default function JewelryDetailPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-background hover:bg-background/50 border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={prevImage}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -175,7 +175,7 @@ export default function JewelryDetailPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-background hover:bg-background/50 border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={nextImage}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -184,26 +184,26 @@ export default function JewelryDetailPage() {
               {/* Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 {product.badge && <Badge className="gradient-primary text-white border-0">{product.badge}</Badge>}
-                {discount > 0 && <Badge variant="destructive">-{discount}%</Badge>}
-                <Badge variant="outline" className="bg-background/80 border-primary/20">
+                {discount > 0 && <Badge variant="destructive" className="bg-red-400">-{discount}%</Badge>}
+                <Badge variant="outline" className="bg-background border-primary">
                   <Gem className="h-3 w-3 mr-1" />
                   Fine Jewelry
                 </Badge>
               </div>
 
               {/* Image Counter */}
-              <div className="absolute bottom-4 right-4 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 text-sm border border-primary/20">
+              <div className="absolute bottom-4 right-4 bg-background backdrop-blur-sm rounded-full px-3 py-1 text-sm border border-primary">
                 {selectedImage + 1} / {product.images.length}
               </div>
             </div>
 
             {/* Thumbnail Grid */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="flex items-center justify-start gap-4">
               {product.images.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
-                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all w-[3rem] h-[3rem] md:w-[5rem] md:h-[5rem] ${
                     selectedImage === index
                       ? "border-primary shadow-lg scale-105"
                       : "border-transparent hover:border-primary/50"
@@ -220,12 +220,12 @@ export default function JewelryDetailPage() {
             </div>
 
             {/* Jewelry Features */}
-            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gradient-to-br from-amber-50/30 to-orange-50/30 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-primary">
               <div className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium text-sm">Free Shipping</p>
-                  <p className="text-xs text-muted-foreground">On orders over $500</p>
+                  <p className="text-xs text-muted-foreground">On orders over $1000</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ export default function JewelryDetailPage() {
             </div>
 
             {/* Jewelry Specifications */}
-            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gradient-to-br from-amber-50/50 to-orange-50/50 border border-primary/20">
               <div className="text-center">
                 <div className="text-2xl font-bold gradient-text">{product.material}</div>
                 <div className="text-sm text-muted-foreground">Material</div>
@@ -473,12 +473,12 @@ export default function JewelryDetailPage() {
             </div>
 
             {/* Trust Indicators */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/10 dark:to-emerald-950/10 border border-green-200 dark:border-green-800/20">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-green-50/50 to-emerald-50/50 border border-green-200">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-green-800 dark:text-green-400">Authenticity & Quality Guarantee</span>
+                <span className="font-medium text-green-800">Authenticity & Quality Guarantee</span>
               </div>
-              <p className="text-sm text-green-700 dark:text-green-300">
+              <p className="text-sm text-green-700">
                 Certified conflict-free diamonds and precious metals with lifetime warranty and certificate of
                 authenticity.
               </p>
@@ -494,20 +494,20 @@ export default function JewelryDetailPage() {
           className="mt-16"
         >
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20">
-              <TabsTrigger value="description" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-amber-50 to-orange-50">
+              <TabsTrigger value="description" className="data-[state=active]:bg-white data-[state=active]:shadow-sm border-none">
                 Description
               </TabsTrigger>
               <TabsTrigger
                 value="specifications"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm border-none"
               >
                 Specifications
               </TabsTrigger>
-              <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:shadow-sm border-none">
                 Reviews ({product.reviews})
               </TabsTrigger>
-              <TabsTrigger value="care" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="care" className="data-[state=active]:bg-white data-[state=active]:shadow-sm border-none">
                 Care & Warranty
               </TabsTrigger>
             </TabsList>
@@ -518,7 +518,7 @@ export default function JewelryDetailPage() {
                 <p className="text-muted-foreground mb-6 text-lg leading-relaxed">{product.description}</p>
 
                 <div className="grid md:grid-cols-2 gap-6 mt-8">
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50 border border-primary/20">
                     <h4 className="font-semibold mb-2 text-primary flex items-center gap-2">
                       <Award className="h-4 w-4" />
                       Perfect For
@@ -532,7 +532,7 @@ export default function JewelryDetailPage() {
                       <li>• Investment jewelry collection</li>
                     </ul>
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50 border border-primary/20">
                     <h4 className="font-semibold mb-2 text-primary flex items-center gap-2">
                       <Clock className="h-4 w-4" />
                       Craftsmanship
@@ -549,7 +549,7 @@ export default function JewelryDetailPage() {
                 </div>
 
                 {/* Brand Story */}
-                <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-amber-50/30 to-orange-50/30 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
+                <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-amber-50/30 to-orange-50/30 border border-primary/20">
                   <h4 className="font-semibold mb-3 text-primary">About {product.brand}</h4>
                   <p className="text-muted-foreground leading-relaxed">
                     {product.brand} represents the pinnacle of luxury jewelry craftsmanship, combining traditional
@@ -659,7 +659,7 @@ export default function JewelryDetailPage() {
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-6">
-                  <div className="p-6 rounded-xl bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-amber-50/50 to-orange-50/50 border border-primary/20">
                     <div className="text-center">
                       <div className="text-4xl font-bold gradient-text mb-2">{product.rating}</div>
                       <div className="flex justify-center mb-2">
@@ -729,7 +729,7 @@ export default function JewelryDetailPage() {
                     <div key={index} className="p-4 rounded-lg border border-primary/20">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 flex items-center justify-center font-semibold text-primary">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center font-semibold text-primary">
                             {review.name.charAt(0)}
                           </div>
                           <div>
@@ -810,12 +810,12 @@ export default function JewelryDetailPage() {
                 </div>
 
                 {/* Warranty Information */}
-                <div className="p-6 rounded-xl bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/10 dark:to-emerald-950/10 border border-green-200 dark:border-green-800/20">
-                  <h4 className="font-semibold mb-3 text-green-800 dark:text-green-400 flex items-center gap-2">
+                <div className="p-6 rounded-xl bg-gradient-to-br from-green-50/50 to-emerald-50/50 border border-green-200">
+                  <h4 className="font-semibold mb-3 text-green-800 flex items-center gap-2">
                     <Award className="h-4 w-4" />
                     Lifetime Warranty
                   </h4>
-                  <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                  <p className="text-sm text-green-700 mb-3">
                     We stand behind the quality of our jewelry with a comprehensive lifetime warranty covering
                     manufacturing defects, stone settings, and metal integrity. This warranty ensures your investment is
                     protected for generations.

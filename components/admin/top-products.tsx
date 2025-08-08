@@ -2,10 +2,11 @@
 
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
-import { mockPerfumes } from "@/lib/perfume-data"
+import { allProducts } from "@/lib/product-data"
+import { Gem, Sparkles } from "lucide-react"
 
 export function TopProducts() {
-  const topProducts = mockPerfumes.slice(0, 6).map((product, index) => ({
+  const topProducts = allProducts.slice(0, 6).map((product, index) => ({
     ...product,
     rank: index + 1,
     sales: Math.floor(Math.random() * 500) + 100,
@@ -31,7 +32,20 @@ export function TopProducts() {
               <p className="font-medium truncate">{product.name}</p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{product.sales} sold</span>
-                <Badge variant="outline" className="text-xs capitalize">
+                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  {product.type === "jewelry" ? (
+                    <>
+                      <Gem className="h-3 w-3" />
+                      Jewelry
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3" />
+                      Perfume
+                    </>
+                  )}
+                </Badge>
+                <Badge variant="secondary" className="text-xs capitalize">
                   {product.category}
                 </Badge>
               </div>

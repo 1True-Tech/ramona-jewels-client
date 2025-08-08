@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" })
 
 export const metadata: Metadata = {
-  title: "Luxe Atelier - Premium Jewelry & Fragrances",
+  title: "Ramona - Premium Jewelry & Fragrances",
   description: "Discover exquisite jewelry and luxury fragrances from world-renowned designers and perfumers",
   keywords: "jewelry, diamonds, gold, silver, perfume, fragrance, luxury, designer jewelry, engagement rings",
 }

@@ -46,7 +46,7 @@ export default function CartPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full md:max-w-6xl md:mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
           <p className="text-muted-foreground">
@@ -54,7 +54,7 @@ export default function CartPage() {
           </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-8 pb-[5rem]">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {state.items.map((item, index) => (
@@ -65,14 +65,14 @@ export default function CartPage() {
                 transition={{ delay: index * 0.1 }}
                 className="bg-card rounded-lg border p-4"
               >
-                <div className="flex gap-4">
-                  <div className="relative w-20 h-20 rounded-md overflow-hidden bg-muted">
-                    <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                <div className="flex gap-1">
+                  <div className="relative w-12 h-15 md:w-20 md:h-20 rounded-md overflow-hidden bg-muted">
+                    <Image src={item.image || "/images/TestImage.jpg"} alt={item.name} fill className="object-cover" />
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{item.name}</h3>
-                    <div className="text-sm text-muted-foreground space-y-1">
+                  <div className="flex-1 w-full max-w-screen">
+                    <h3 className="font-medium truncate w-[10rem] md:min-w-[30rem]">{item.name}</h3>
+                    <div className="text-xs md:text-sm text-muted-foreground space-y-1">
                       {item.color && <p>Color: {item.color}</p>}
                       {item.size && <p>Size: {item.size}</p>}
                     </div>
@@ -89,7 +89,7 @@ export default function CartPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="outline"
                         size="icon"
@@ -119,7 +119,7 @@ export default function CartPage() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-card rounded-lg border p-6 h-fit sticky top-8"
+            className="bg-card rounded-lg border p-6 h-fit sticky top-8 max-w-[25.5rem]"
           >
             <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
 

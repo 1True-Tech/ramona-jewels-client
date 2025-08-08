@@ -3,22 +3,22 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Plus, Search, Filter, Edit, Trash2, Eye } from "lucide-react"
+import { Plus, Search, Filter, Edit, Trash2, Eye, Gem, Sparkles } from "lucide-react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
-import { mockPerfumes, type Perfume } from "@/lib/perfume-data"
+import { allProducts, type Product, type JewelryProduct, type PerfumeProduct } from "@/lib/product-data"
 import Image from "next/image"
 import Link from "next/link"
 
 export default function AdminProductsPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [products, setProducts] = useState<Perfume[]>(mockPerfumes)
+  const [products, setProducts] = useState<Product[]>(allProducts)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredProducts, setFilteredProducts] = useState<Perfume[]>(mockPerfumes)
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>(allProducts)
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -52,7 +52,7 @@ export default function AdminProductsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">Products</h1>
-              <p className="text-muted-foreground">Manage your perfume collection</p>
+              <p className="text-muted-foreground">Manage your jewelry and perfume collection</p>
             </div>
             <Link href="/admin/products/add">
               <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
@@ -133,8 +133,19 @@ export default function AdminProductsPage() {
                           </div>
                           <div>
                             <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {product.size} • {product.concentration}
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              {product.type === "jewelry" ? (
+                                <>
+                                  <Gem className="h-3 w-3" />
+                                  {(product as JewelryProduct).material}
+                                  {(product as JewelryProduct).gemstone && ` • ${(product as JewelryProduct).gemstone}`}
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-3 w-3" />
+                                  {(product as PerfumeProduct).size} • {(product as PerfumeProduct).concentration}
+                                </>
+                              )}
                             </p>
                           </div>
                         </div>

@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Star, Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw, Plus, Minus, Sparkles, Award, Clock, Zap, Gift, MessageCircle, ChevronLeft, ChevronRight, Droplets, Wind, Info, Palette, Sun, Moon } from 'lucide-react'
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
-import { mockPerfumes, type PerfumeProduct } from "@/lib/product-data"
+import { mockPerfumes } from "@/lib/product-data"
 import Link from "next/link"
 import { Navbar } from "@/components/layouts/navbar"
 import { Button } from "@/components/ui/button"
@@ -173,7 +173,7 @@ export default function PerfumeDetailPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-background hover:bg-background border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={nextImage}
               >
                 <ChevronRight className="h-4 w-4" />
