@@ -14,13 +14,13 @@ export function StatsCard({ title, value, change, trend, icon: Icon }: StatsCard
   const trendColor = trend === "up" ? "text-green-600" : "text-red-600"
 
   return (
-    <div className="bg-card rounded-lg border p-6 hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-lg border py-6 px-3 md:px-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <p className="text-2xl font-bold gradient-text">{value}</p>
         </div>
-        <div className="p-2 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-full">
+        <div className="p-2 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full">
           <Icon className="h-5 w-5 text-primary" />
         </div>
       </div>

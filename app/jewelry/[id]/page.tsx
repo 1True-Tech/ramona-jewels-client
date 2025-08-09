@@ -129,27 +129,7 @@ export default function JewelryDetailPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
-        {/* Breadcrumb */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center space-x-2 text-sm text-muted-foreground mb-8"
-        >
-          <Link href="/" className="hover:text-primary transition-colors">
-            Home
-          </Link>
-          <span>/</span>
-          <Link href="/jewelry" className="hover:text-primary transition-colors">
-            Jewelry
-          </Link>
-          <span>/</span>
-          <Link href={`/jewelry/${product.category}`} className="hover:text-primary transition-colors capitalize">
-            {product.category}
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{product.name}</span>
-        </motion.div>
+      <div className="md:max-w-7xl md:mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
 
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Product Images */}

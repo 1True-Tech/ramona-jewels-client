@@ -161,14 +161,14 @@ export default function CartPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Link href="/checkout">
+            <div className="space-y-3">
+              <Link href="/checkout" className="">
                 <Button size="lg" className="w-full">
                   Proceed to Checkout
                 </Button>
               </Link>
-              <Link href="/products">
-                <Button variant="outline" size="lg" className="w-full bg-transparent">
+              <Link href="/products" className="">
+                <Button variant="outline" size="lg" className="w-full bg-transparent mt-3">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Continue Shopping
                 </Button>

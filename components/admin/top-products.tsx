@@ -20,7 +20,7 @@ export function TopProducts() {
       <div className="space-y-3">
         {topProducts.map((product) => (
           <div key={product.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 text-sm font-bold text-primary">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 text-sm font-bold text-primary">
               {product.rank}
             </div>
 
