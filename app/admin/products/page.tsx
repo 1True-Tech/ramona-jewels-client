@@ -55,7 +55,7 @@ export default function AdminProductsPage() {
               <p className="text-muted-foreground">Manage your jewelry and perfume collection</p>
             </div>
             <Link href="/admin/products/add">
-              <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+              <Button className="gradient-primary text-white">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
@@ -123,7 +123,7 @@ export default function AdminProductsPage() {
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted">
+                          <div className="relative min-w-12 h-12 rounded-lg overflow-hidden bg-muted">
                             <Image
                               src={product.image || "/placeholder.svg"}
                               alt={product.name}
@@ -132,7 +132,7 @@ export default function AdminProductsPage() {
                             />
                           </div>
                           <div>
-                            <p className="font-medium">{product.name}</p>
+                            <p className="font-medium whitespace-nowrap">{product.name}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-1">
                               {product.type === "jewelry" ? (
                                 <>
@@ -150,7 +150,7 @@ export default function AdminProductsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-sm">{product.brand}</td>
+                      <td className="py-4 px-4 text-sm whitespace-nowrap">{product.brand}</td>
                       <td className="py-4 px-4">
                         <Badge variant="secondary" className="capitalize">
                           {product.category}

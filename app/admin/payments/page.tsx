@@ -327,7 +327,7 @@ export default function AdminPaymentsPage() {
         {/* Payments Table */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Tabs defaultValue="transactions" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20">
+            <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-amber-50 to-orange-50 gap-4 h-11">
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
               <TabsTrigger value="disputes">Disputes</TabsTrigger>

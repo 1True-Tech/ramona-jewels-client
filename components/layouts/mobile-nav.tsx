@@ -17,7 +17,7 @@ export function MobileNav() {
     { name: "Home", href: "/", icon: Home },
     { name: "Jewelry", href: "/jewelry", icon: Gem },
     { name: "Perfumes", href: "/perfumes", icon: Sparkles },
-    { name: "Cart", href: "/cart", icon: ShoppingCart, badge: state.itemCount },
+    { name: "Cart", href: "/cart", icon: ShoppingCart, badge: state.itemCount > 0 ? state.itemCount : null }, // Only show if > 0 },
     {
       name: "Profile",
       href: user ? (user.role === "admin" ? "/admin" : "/profile") : "/auth/login",

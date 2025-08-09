@@ -1,0 +1,14 @@
+select {
+    color: white;
+    background-color: rgba(255, 166, 0, 0.804);
+    font-weight: 500;
+  }
+
+ option {
+    color: black;
+  }
+  
+option:checked {
+    background-color: orange;
+    color: white;
+} 
