@@ -137,8 +137,8 @@ export function CategoryChart() {
         <div className="flex gap-3 items-center">
           {/* Year Filter */}
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="max-w-[90px]">
-              <SelectValue placeholder="Year" />
+            <SelectTrigger className="max-w-[90px] bg-amber-400 text-white">
+              <SelectValue placeholder="Year" className="text-white"/>
             </SelectTrigger>
             <SelectContent className="bg-white">
               {uniqueYears.map((year) => (
@@ -155,7 +155,7 @@ export function CategoryChart() {
               value={selectedMonth.toString()}
               onValueChange={(val) => setSelectedMonth(parseInt(val))}
             >
-              <SelectTrigger className="max-w-[118px]">
+              <SelectTrigger className="max-w-[118px] bg-amber-400 text-white">
                 <SelectValue placeholder="Month" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -170,7 +170,7 @@ export function CategoryChart() {
 
           {/* Report Type Filter */}
           <Select value={reportType} onValueChange={setReportType}>
-            <SelectTrigger className="max-w-[90px]">
+            <SelectTrigger className="max-w-[90px] bg-amber-400 text-white">
               <SelectValue placeholder="Report Type" />
             </SelectTrigger>
             <SelectContent className="bg-white">

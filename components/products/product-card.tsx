@@ -50,11 +50,6 @@ export function ProductCard({ product }: ProductCardProps) {
     : 0
 
   const getProductUrl = () => {
-    if (product.type === "jewelry") {
-      return `/jewelry/${product.id}`
-    } else if (product.type === "perfume") {
-      return `/perfumes/${product.id}`
-    }
     return `/products/${product.id}`
   }
 
