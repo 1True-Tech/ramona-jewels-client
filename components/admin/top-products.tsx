@@ -16,50 +16,91 @@ export function TopProducts() {
 
   return (
     <div className="bg-card rounded-lg border p-6">
-      <h3 className="text-lg font-semibold mb-4 gradient-text">Bestselling Products</h3>
-      <div className="space-y-3">
-        {topProducts.map((product) => (
-          <div key={product.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 text-sm font-bold text-primary">
-              {product.rank}
-            </div>
+      <h3 className="text-lg font-semibold mb-4 gradient-text">
+        Bestselling Products
+      </h3>
 
-            <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted">
-              <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
-            </div>
+      <div className="overflow-x-auto rounded-t-xl overflow-y-hidden">
+        <table className="min-w-full border-collapse rounded-xl">
+          <thead className="border-b border-primary bg-amber-400 text-white">
+            <tr className="bg-muted text-left text-sm font-medium">
+              <th className="p-3">Rank</th>
+              <th className="p-3">Product</th>
+              <th className="p-3">Type</th>
+              <th className="p-3">Category</th>
+              <th className="p-3">Sales</th>
+              <th className="p-3">Price</th>
+              <th className="p-3">Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topProducts.map((product) => (
+              <tr
+                key={product.id}
+                className="border-b border-primary hover:bg-muted/50 transition-colors"
+              >
+                <td className="p-3 font-bold">{product.rank}</td>
 
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{product.name}</p>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{product.sales} sold</span>
-                <Badge variant="outline" className="text-xs flex items-center gap-1">
-                  {product.type === "jewelry" ? (
-                    <>
-                      <Gem className="h-3 w-3" />
-                      Jewelry
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3" />
-                      Perfume
-                    </>
-                  )}
-                </Badge>
-                <Badge variant="secondary" className="text-xs capitalize">
-                  {product.category}
-                </Badge>
-              </div>
-            </div>
+                {/* Product Image + Name */}
+                <td className="p-3 flex items-center gap-3">
+                  <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                    <Image
+                      src={product.image || "/placeholder.svg"}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <span className="font-medium truncate max-w-[150px] sm:max-w-none">
+                    {product.name}
+                  </span>
+                </td>
 
-            <div className="text-right">
-              <p className="font-medium">${product.price}</p>
-              <p className={`text-xs ${product.trend === "up" ? "text-green-600" : "text-red-600"}`}>
-                {product.trend === "up" ? "+" : "-"}
-                {product.trendValue}%
-              </p>
-            </div>
-          </div>
-        ))}
+                {/* Type */}
+                <td className="p-3">
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    {product.type === "jewelry" ? (
+                      <>
+                        <Gem className="h-3 w-3" />
+                        Jewelry
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3 w-3" />
+                        Perfume
+                      </>
+                    )}
+                  </Badge>
+                </td>
+
+                {/* Category */}
+                <td className="p-3">
+                  <Badge variant="secondary" className="text-xs capitalize">
+                    {product.category}
+                  </Badge>
+                </td>
+
+                {/* Sales */}
+                <td className="p-3 text-sm text-muted-foreground whitespace-nowrap">
+                  {product.sales} sold
+                </td>
+
+                {/* Price */}
+                <td className="p-3 font-medium">${product.price}</td>
+
+                {/* Trend */}
+                <td
+                  className={`p-3 text-xs font-semibold ${
+                    product.trend === "up" ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {product.trend === "up" ? "+" : "-"}
+                  {product.trendValue}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )

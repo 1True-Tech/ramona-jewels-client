@@ -40,7 +40,7 @@ const statusColors = {
 
 export function RecentOrders() {
   return (
-    <div className="bg-card rounded-lg border pt-6 pb-3 px-3 md:px-4 md:pb-4 shadow-md overflow-x-auto">
+    <div className="bg-card rounded-lg border pt-6 pb-3 px-3 md:px-4 md:pb-4 overflow-x-auto">
       <h3 className="text-xl font-semibold mb-6">Recent Orders</h3>
       <table className="w-full text-left text-sm">
         <thead className="border-b border-gray-200">

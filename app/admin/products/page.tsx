@@ -99,7 +99,8 @@ export default function AdminProductsPage() {
               <span className="text-sm text-muted-foreground">{filteredProducts.length} products</span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
@@ -132,7 +133,7 @@ export default function AdminProductsPage() {
                             />
                           </div>
                           <div>
-                            <p className="font-medium whitespace-nowrap">{product.name}</p>
+                            <p className="font-medium">{product.name}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-1">
                               {product.type === "jewelry" ? (
                                 <>
@@ -150,7 +151,7 @@ export default function AdminProductsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-sm whitespace-nowrap">{product.brand}</td>
+                      <td className="py-4 px-4 text-sm">{product.brand}</td>
                       <td className="py-4 px-4">
                         <Badge variant="secondary" className="capitalize">
                           {product.category}
@@ -200,6 +201,94 @@ export default function AdminProductsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {filteredProducts.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="border rounded-lg p-4 bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <Image
+                        src={product.image || "/placeholder.svg"}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-medium text-sm truncate">{product.name}</h3>
+                          <p className="text-xs text-muted-foreground">{product.brand}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Link href={`/products/${product.id}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                          <Link href={`/admin/products/edit/${product.id}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="text-destructive hover:text-destructive h-8 w-8"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="secondary" className="capitalize text-xs">
+                          {product.category}
+                        </Badge>
+                        <Badge variant={product.inStock ? "default" : "destructive"} className="text-xs">
+                          {product.inStock ? "In Stock" : "Out of Stock"}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">${product.price}</span>
+                          {product.originalPrice && (
+                            <span className="text-sm text-muted-foreground line-through">${product.originalPrice}</span>
+                          )}
+                        </div>
+                        <span className={`text-sm ${product.stockCount < 10 ? "text-red-600" : "text-green-600"}`}>
+                          {product.stockCount} units
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
+                        {product.type === "jewelry" ? (
+                          <>
+                            <Gem className="h-3 w-3" />
+                            {(product as JewelryProduct).material}
+                            {(product as JewelryProduct).gemstone && ` • ${(product as JewelryProduct).gemstone}`}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3" />
+                            {(product as PerfumeProduct).size} • {(product as PerfumeProduct).concentration}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </motion.div>

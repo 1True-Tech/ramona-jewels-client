@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-// import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -70,7 +70,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           x: isLargeScreen ? 0 : sidebarOpen ? 0 : "-100%",
         }}
         transition={{ type: "tween" }}
-        className={`fixed inset-y-0 left-0 z-50 w-64 border-r flex flex-col bg-white`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r flex flex-col`}
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2 px-6 border-b shrink-0">
@@ -113,7 +113,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* User info */}
-        <div className="border-t p-4 shrink-0 flex items-center justify-between w-full">
+        <div className="border-t p-4 shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <span className="text-primary-foreground text-sm font-medium">
@@ -125,15 +125,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* <ThemeToggle /> */}
+          <div className="flex items-center justify-between">
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"
               onClick={logout}
-              className="justify-start"
+              className="text-muted-foreground hover:text-foreground"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
             </Button>
           </div>
         </div>
