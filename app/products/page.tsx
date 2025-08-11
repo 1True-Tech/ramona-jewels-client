@@ -75,9 +75,9 @@ export default function ProductsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold font-playfair gradient-text mb-4">All Products</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-8">
             Discover our complete collection of luxury jewelry and premium fragrances
           </p>
         </motion.div>

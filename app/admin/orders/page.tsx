@@ -289,7 +289,7 @@ export default function AdminOrdersPage() {
         >
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b bg-muted/50">
+              <thead className="border-b gradient-primary text-white">
                 <tr>
                   <th className="text-left py-3 px-4 font-medium">Order</th>
                   <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">Customer</th>
@@ -302,7 +302,7 @@ export default function AdminOrdersPage() {
               </thead>
               <tbody>
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="border-b hover:bg-muted/50">
+                  <tr key={order.id} className="border-b border-amber-300 hover:bg-muted/50">
                     <td className="py-4 px-4">
                       <div>
                         <Link href={`/admin/orders/${order.id}`} className="font-medium text-primary hover:underline">

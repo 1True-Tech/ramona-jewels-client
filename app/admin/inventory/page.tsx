@@ -221,8 +221,8 @@ export default function AdminInventoryPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
+              <table className="w-full rounded-t-xl overflow-hidden">
+                <thead className="border-b border-primary/20 gradient-primary text-white">
                   <tr className="border-b border-primary/20">
                     <th className="text-left py-3 px-4 font-medium">Product</th>
                     <th className="text-left py-3 px-4 font-medium">Type</th>
@@ -241,11 +241,11 @@ export default function AdminInventoryPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="border-b border-primary/10 hover:bg-muted/50"
+                      className="border-b border-amber-300 hover:bg-muted/50"
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted jewelry-sparkle">
+                          <div className="relative min-w-9 h-9 rounded-lg overflow-hidden bg-muted jewelry-sparkle">
                             <Image
                               src={product.image || "/placeholder.svg"}
                               alt={product.name}
@@ -254,7 +254,7 @@ export default function AdminInventoryPage() {
                             />
                           </div>
                           <div>
-                            <p className="font-medium">{product.name}</p>
+                            <p className="font-medium whitespace-nowrap">{product.name}</p>
                             <p className="text-sm text-muted-foreground">{product.brand}</p>
                           </div>
                         </div>
