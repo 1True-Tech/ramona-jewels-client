@@ -42,14 +42,14 @@ export function RecentOrders() {
   return (
     <div className="bg-card rounded-lg border pt-6 pb-3 px-3 md:px-4 md:pb-4 overflow-x-auto">
       <h3 className="text-xl font-semibold mb-6">Recent Orders</h3>
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-gray-200">
+      <table className="w-full text-left text-sm rounded-xl overflow-hidden">
+        <thead className="border-b gradient-primary border-primary/20 text-white">
           <tr>
-            <th className="py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Order ID</th>
-            <th className="py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Customer</th>
-            <th className="py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Product</th>
-            <th className="py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Amount</th>
-            <th className="py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Status</th>
+            <th className="py-3 px-4 font-medium whitespace-nowrap">Order ID</th>
+            <th className="py-3 px-4 font-medium whitespace-nowrap">Customer</th>
+            <th className="py-3 px-4 font-medium whitespace-nowrap">Product</th>
+            <th className="py-3 px-4 font-medium whitespace-nowrap">Amount</th>
+            <th className="py-3 px-4 font-medium whitespace-nowrap">Status</th>
           </tr>
         </thead>
         <tbody>

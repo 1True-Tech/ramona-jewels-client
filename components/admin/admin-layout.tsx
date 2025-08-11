@@ -16,15 +16,16 @@ import {
   X,
   LogOut,
   Warehouse,
-  CreditCard
+  CreditCard,
+  Tag
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-import { ThemeToggle } from "@/components/theme-toggle"
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Products", href: "/admin/products", icon: Package },
+  { name: "Categories", href: "/admin/categories", icon: Tag },
   { name: "Inventory", href: "/admin/inventory", icon: Warehouse },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { name: "Payments", href: "/admin/payments", icon: CreditCard },
@@ -58,7 +59,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Overlay for mobile */}
       {sidebarOpen && !isLargeScreen && (
         <div
-          className="fixed inset-0 z-40 bg-background/90 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-background/30 backdrop-blur-xs"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -70,10 +71,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           x: isLargeScreen ? 0 : sidebarOpen ? 0 : "-100%",
         }}
         transition={{ type: "tween" }}
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r flex flex-col`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-gray-200 flex flex-col bg-white shadow-none ${sidebarOpen ? "border-r-none" : ""}`}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 px-6 border-b shrink-0">
+        <div className="flex h-16 items-center gap-2 px-6 border-b border-gray-200 shrink-0">
           <div className="!h-8 min-w-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
             <span className="text-white font-bold text-sm">R</span>
           </div>
@@ -113,8 +114,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* User info */}
-        <div className="border-t p-4 shrink-0">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="border-t border-gray-200 p-4 shrink-0 flex items-center justify-between w-full">
+          <Link href={user ? "/profile" : "/auth/login"} className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <span className="text-primary-foreground text-sm font-medium">
                 {user?.name?.charAt(0)}
@@ -124,17 +125,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <p className="text-sm font-medium truncate">{user?.name}</p>
               <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <ThemeToggle />
+          </Link>
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={logout}
-              className="text-muted-foreground hover:text-foreground"
+              className="justify-start"
             >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -147,7 +146,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         }`}
       >
         {/* Top bar */}
-        <div className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6">
+        <div className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-200 bg-background px-6">
           {!isLargeScreen && (
             <Button
               variant="ghost"

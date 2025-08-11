@@ -118,7 +118,7 @@ export default function AdminSettingsPage() {
           transition={{ delay: 0.1 }}
         >
           <Tabs defaultValue="store" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 gap-4">
               <TabsTrigger value="store" className="flex items-center gap-2">
                 <Store className="h-4 w-4" />
                 <span className="hidden sm:inline">Store</span>

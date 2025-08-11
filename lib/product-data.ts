@@ -1,3 +1,5 @@
+import React from 'react'
+
 export interface Product {
     id: string
     name: string
@@ -10,23 +12,26 @@ export interface Product {
     reviews?: number
     badge?: string
     category: string
-    type: "jewelry" | "perfume"
+    type: string // Changed to support any product type
     inStock: boolean
     stockCount: number
     description: string
+    // Dynamic fields based on product type
+    [key: string]: React.ReactNode
   }
   
   export interface JewelryProduct extends Product {
-    type: "jewelry"
+    type: "jewelry" | "perfume"
     material: string
     gemstone?: string
     size?: string
     weight?: string
-    collection: string
+    collection?: string
+    certification?: string
   }
   
   export interface PerfumeProduct extends Product {
-    type: "perfume"
+    type: "perfume" | ""
     size: string
     concentration: "EDT" | "EDP" | "Parfum" | "EDC"
     topNotes: string[]
@@ -34,8 +39,24 @@ export interface Product {
     baseNotes: string[]
     gender: "Men" | "Women" | "Unisex"
   }
+
+  export interface AccessoryProduct extends Product {
+    type: "accessories"
+    material: string
+    color: string
+    dimensions?: string
+    weight?: string
+  }
+
+  export interface SkincareProduct extends Product {
+    type: "skincare"
+    size: string
+    skinType?: string[]
+    ingredients?: string[]
+    spf?: number
+  }
   
-  export const mockJewelry: JewelryProduct[] = [
+  export const mockProducts: JewelryProduct[] = [
     {
       id: "j1",
       name: "Eternal Diamond Solitaire Ring",
@@ -145,13 +166,11 @@ export interface Product {
       inStock: true,
       stockCount: 5,
     },
-  ]
-  
-  export const mockPerfumes: PerfumeProduct[] = [
     {
       id: "p1",
       name: "Midnight Rose",
       brand: "Luxury Scents",
+      material: "",
       price: 129.99,
       originalPrice: 159.99,
       image: "/placeholder.svg?height=300&width=300&text=Midnight+Rose",
@@ -181,6 +200,7 @@ export interface Product {
       id: "p2",
       name: "Ocean Breeze",
       brand: "Aqua Fragrances",
+      material: "",
       price: 89.99,
       image: "/placeholder.svg?height=300&width=300&text=Ocean+Breeze",
       images: [
@@ -209,6 +229,7 @@ export interface Product {
       id: "p3",
       name: "Velvet Oud",
       brand: "Oriental Luxe",
+      material: "",
       price: 199.99,
       originalPrice: 249.99,
       image: "/placeholder.svg?height=300&width=300&text=Velvet+Oud",
@@ -234,7 +255,8 @@ export interface Product {
     },
   ]
   
-  export const allProducts: (JewelryProduct | PerfumeProduct)[] = [...mockJewelry, ...mockPerfumes]
+  
+  export const allProducts: (JewelryProduct | PerfumeProduct)[] = [...mockProducts]
   
   export const jewelryCategories = [
     {
