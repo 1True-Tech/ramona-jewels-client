@@ -9,7 +9,7 @@ import { allProducts } from "@/lib/product-data"
 import { Navbar } from "@/components/layouts/navbar"
 import { ProductSort } from "@/components/products/product-sort"
 import { ProductFilters } from "@/components/products/product-filters"
-import { ProductCard } from "@/components/products/product-card"
+import { Product, ProductCard } from "@/components/products/product-card"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 
 export default function ProductsPage() {
@@ -208,7 +208,7 @@ export default function ProductsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
-                  <ProductCard product={product} />
+                  <ProductCard product={product as Product} />
                 </motion.div>
               ))}
             </motion.div>

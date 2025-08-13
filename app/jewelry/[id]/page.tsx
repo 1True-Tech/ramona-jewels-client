@@ -1,3 +1,12 @@
+// this will be a demo display, so this route will still be available
+export default function JewerlyPage(){
+    return null
+}
+// remove the above code, and replace it with the real one
+
+
+
+
 // "use client"
 
 // import { useState } from "react"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -18,7 +18,8 @@ import {
   Mail,
   ArrowRight,
   Home,
-  ShoppingBag
+  ShoppingBag,
+  Loader
 } from "lucide-react"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
@@ -38,7 +39,9 @@ interface Order {
   createdAt: Date
 }
 
-export default function OrderSuccessPage() {
+
+
+function OrderSuccess() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
@@ -380,4 +383,10 @@ export default function OrderSuccessPage() {
       <MobileNav />
     </div>
   )
+}
+
+export default function OrderSuccessPage(){
+  return <Suspense fallback={<div className="w-full py-10 flex items-center justify-center mx-auto"><Loader className="animate-spin"/></div>}>
+    <OrderSuccess/>
+  </Suspense>
 }

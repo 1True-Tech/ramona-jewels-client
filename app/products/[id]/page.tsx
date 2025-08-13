@@ -26,7 +26,7 @@ import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
 import { allProducts, type JewelryProduct, type PerfumeProduct } from "@/lib/product-data"
 import { Navbar } from "@/components/layouts/navbar"
-import { ProductCard } from "@/components/products/product-card"
+import { Product, ProductCard } from "@/components/products/product-card"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 
 export default function ProductDetailPage() {
@@ -622,7 +622,7 @@ export default function ProductDetailPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
-                <ProductCard key={relatedProduct.id} product={relatedProduct} />
+                <ProductCard key={relatedProduct.id} product={relatedProduct as Product} />
               ))}
             </div>
           </motion.div>

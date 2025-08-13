@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Gem, Sparkles } from "lucide-react";
 import { allProducts } from "@/lib/product-data";
-import { ProductCard } from "../products/product-card";
+import { Product, ProductCard } from "../products/product-card";
 
 const featuredProducts = allProducts.slice(0, 6).map((product) => ({
   id: product.id,
@@ -93,7 +93,7 @@ export function FeaturedProducts() {
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
               >
-                <ProductCard product={product} />
+                <ProductCard product={product as Product} />
               </motion.div>
             ))}
           </AnimatePresence>

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
 
-interface Product {
+export interface Product {
   id: string
   name: string
   price: number
