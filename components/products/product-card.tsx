@@ -9,6 +9,8 @@ import { Heart, ShoppingCart, Star, Gem, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
+import { useWishlist } from "@/contexts/wishlist-context"
+import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export interface Product {
@@ -28,11 +30,23 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { user } = useAuth()
   const { addItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
   const { toast } = useToast()
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
+    
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please log in to add items to your cart.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     addItem({
       id: product.id,
       name: product.name,
@@ -43,6 +57,42 @@ export function ProductCard({ product }: ProductCardProps) {
       title: "Added to cart",
       description: `${product.name} has been added to your cart.`,
     })
+  }
+
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please log in to add items to your wishlist.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    const isCurrentlyInWishlist = isInWishlist(product.id)
+    
+    if (isCurrentlyInWishlist) {
+      removeFromWishlist(product.id)
+      toast({
+        title: "Removed from wishlist",
+        description: `${product.name} has been removed from your wishlist.`,
+      })
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        category: product.type || "product",
+        type: product.type || "product",
+      })
+      toast({
+        title: "Added to wishlist",
+        description: `${product.name} has been added to your wishlist.`,
+      })
+    }
   }
 
   const discount = product.originalPrice
@@ -77,7 +127,7 @@ export function ProductCard({ product }: ProductCardProps) {
               </Badge>
             )}
             {product.type && (
-              <Badge variant="outline" className="text-xs border-primary/20 bg-background/80">
+              <Badge variant="outline" className="text-xs border-primary/20 bg-white">
                 {product.type === "jewelry" ? (
                   <>
                     <Gem className="h-3 w-3 mr-1" />
@@ -97,16 +147,12 @@ export function ProductCard({ product }: ProductCardProps) {
           <Button
             size="icon"
             variant="ghost"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background border border-primary/20"
-            onClick={(e) => {
-              e.preventDefault()
-              toast({
-                title: "Added to wishlist",
-                description: `${product.name} has been added to your wishlist.`,
-              })
-            }}
+            className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-primary/20 ${
+              isInWishlist(product.id) ? "text-red-500" : ""
+            }`}
+            onClick={handleWishlistToggle}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
           </Button>
 
           {/* Quick Add to Cart */}

@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { createContext, useContext, useReducer, useEffect } from "react"
+import { useAuth } from "@/contexts/auth-context"
 
 interface CartItem {
   id: string
@@ -94,22 +95,34 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     total: 0,
     itemCount: 0,
   })
 
+  // Load cart when user changes
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart")
-    if (savedCart) {
-      dispatch({ type: "LOAD_CART", payload: JSON.parse(savedCart) })
+    if (user) {
+      const savedCart = localStorage.getItem(`cart_${user.id}`)
+      if (savedCart) {
+        dispatch({ type: "LOAD_CART", payload: JSON.parse(savedCart) })
+      } else {
+        dispatch({ type: "CLEAR_CART" })
+      }
+    } else {
+      // Clear cart when user logs out
+      dispatch({ type: "CLEAR_CART" })
     }
-  }, [])
+  }, [user])
 
+  // Save cart when items change (only if user is logged in)
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(state.items))
-  }, [state.items])
+    if (user) {
+      localStorage.setItem(`cart_${user.id}`, JSON.stringify(state.items))
+    }
+  }, [state.items, user])
 
   const addItem = (item: Omit<CartItem, "quantity">) => {
     dispatch({ type: "ADD_ITEM", payload: { ...item, quantity: 1 } })
