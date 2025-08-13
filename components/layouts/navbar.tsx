@@ -8,8 +8,9 @@ import { Search, ShoppingCart, User, Menu, X, Heart, Gem, Package } from "lucide
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
+import { useWishlist } from "@/contexts/wishlist-context"
+import { useAuth } from "@/contexts/auth-context"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -17,6 +18,7 @@ export function Navbar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const { state } = useCart()
+  const { state: wishlistState } = useWishlist()
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -68,7 +70,7 @@ export function Navbar() {
                 placeholder="Search jewelry & fragrances..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-primary focus:border-primary"
+                className="pl-10 border border-primary focus:outline-none outline-none ring-0 ring-white"
               />
             </div>
           </div>
@@ -76,9 +78,16 @@ export function Navbar() {
           {/* Right Side Icons */}
           <div className="flex items-center space-x-4">
             {/* Wishlist */}
-            <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-              <Heart className="h-5 w-5" />
-            </Button>
+            <Link href="/wishlist">
+              <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">
+                <Heart className="h-5 w-5" />
+                {wishlistState.itemCount > 0 && (
+                  <Badge className="absolute -top-1 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs gradient-primary text-white border-0">
+                    {wishlistState.itemCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
 
             {/* Cart */}
             <Link href="/cart">
@@ -91,6 +100,15 @@ export function Navbar() {
                 )}
               </Button>
             </Link>
+
+            {/* Orders - Only show for authenticated users */}
+            {user && (
+              <Link href="/orders" className="hidden lg:block">
+                <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                  <Package className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
 
             {/* User Menu */}
             {user ? (
@@ -143,7 +161,7 @@ export function Navbar() {
                   placeholder="Search jewelry & fragrances..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 border-primary/20"
+                  className="pl-10 border-primary/20 outline-none ring-white"
                 />
               </div>
 
@@ -163,6 +181,20 @@ export function Navbar() {
                     {item.name}
                   </Link>
                 ))}
+
+                {/* Orders link for authenticated users */}
+                {user && (
+                  <Link
+                    href="/orders"
+                    className="block pr-3 py-2 text-base font-medium rounded-md transition-colors text-muted-foreground hover:text-primary hover:bg-accent"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Orders
+                    </div>
+                  </Link>
+                )}
 
                 {/* User Menu */}
                 {user ? (

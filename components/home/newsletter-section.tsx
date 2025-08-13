@@ -60,17 +60,17 @@ export function NewsletterSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
           onSubmit={handleSubmit}
-          className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
+          className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto sm:items-center"
         >
           <Input
             type="email"
             placeholder="Enter your email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="flex-1 ring-2 ring-white outline-0 text-primary-foreground placeholder:text-primary-foreground"
+            className="flex-1 ring-2 ring-white outline-0 text-gray-100 outline-none min-h-[2.7rem] text-primary-foreground placeholder:text-primary-foreground"
             required
           />
-          <Button type="submit" variant="secondary" disabled={isLoading} className="group bg-white">
+          <Button type="submit" variant="secondary" disabled={isLoading} className="group bg-white min-h-[2.7rem]">
             {isLoading ? (
               "Subscribing..."
             ) : (
