@@ -21,7 +21,7 @@ export default function WishlistPage() {
       name: item.name,
       price: item.price,
       image: item.image,
-      quantity: 1,
+      // quantity: 1,
     })
     toast({
       title: "Added to cart",
