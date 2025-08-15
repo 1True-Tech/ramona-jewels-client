@@ -8,13 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
 import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, TrendingUp, Gem, Sparkles } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { allProducts } from "@/lib/product-data"
 import Image from "next/image"
+import Link from "next/link"
 
 export default function AdminInventoryPage() {
   const { user } = useAuth()
@@ -26,7 +25,6 @@ export default function AdminInventoryPage() {
   const [selectedCategory, setSelectedCategory] = useState("")
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all")
   const [filteredProducts, setFilteredProducts] = useState(allProducts)
-  const [editingProduct, setEditingProduct] = useState<any>(null)
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -101,10 +99,12 @@ export default function AdminInventoryPage() {
               <h1 className="text-3xl font-bold font-playfair gradient-text">Inventory Management</h1>
               <p className="text-muted-foreground">Manage your jewelry and perfume inventory</p>
             </div>
-            <Button className="gradient-primary text-white border-0 hover:opacity-90">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
+            <Link href="/admin/inventory/add">
+              <Button className="gradient-primary text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </Link>
           </div>
         </motion.div>
 
@@ -113,8 +113,8 @@ export default function AdminInventoryPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6"
         >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-card rounded-lg border border-primary/20 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -153,6 +153,7 @@ export default function AdminInventoryPage() {
               </div>
               <TrendingUp className="h-8 w-8 text-primary" />
             </div>
+            </div>
           </div>
         </motion.div>
 
@@ -161,8 +162,8 @@ export default function AdminInventoryPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-col sm:flex-row gap-4"
         >
+          <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -204,7 +205,8 @@ export default function AdminInventoryPage() {
               <SelectItem value="low">Low Stock (≤10)</SelectItem>
               <SelectItem value="out">Out of Stock</SelectItem>
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         </motion.div>
 
         {/* Products Table */}
@@ -212,8 +214,8 @@ export default function AdminInventoryPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-card rounded-lg border border-primary/20"
         >
+          <div className="bg-card rounded-lg border border-primary/20">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Inventory Items</h2>
@@ -236,11 +238,8 @@ export default function AdminInventoryPage() {
                 </thead>
                 <tbody>
                   {filteredProducts.map((product, index) => (
-                    <motion.tr
-                      key={product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                    <tr
+                      key={index}
                       className="border-b border-amber-300 hover:bg-muted/50"
                     >
                       <td className="py-4 px-4">
@@ -326,90 +325,16 @@ export default function AdminInventoryPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hover:bg-primary/10"
-                                onClick={() => setEditingProduct(product)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>Edit Product</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="stock">Stock Quantity</Label>
-                                  <Input
-                                    id="stock"
-                                    type="number"
-                                    value={editingProduct?.stockCount || 0}
-                                    onChange={(e) =>
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        stockCount: Number.parseInt(e.target.value) || 0,
-                                      })
-                                    }
-                                    className="border-primary/20"
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="price">Price</Label>
-                                  <Input
-                                    id="price"
-                                    type="number"
-                                    step="0.01"
-                                    value={editingProduct?.price || 0}
-                                    onChange={(e) =>
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        price: Number.parseFloat(e.target.value) || 0,
-                                      })
-                                    }
-                                    className="border-primary/20"
-                                  />
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    onClick={() => {
-                                      if (editingProduct) {
-                                        setProducts(
-                                          products.map((p) =>
-                                            p.id === editingProduct.id
-                                              ? {
-                                                  ...p,
-                                                  stockCount: editingProduct.stockCount,
-                                                  price: editingProduct.price,
-                                                  inStock: editingProduct.stockCount > 0,
-                                                }
-                                              : p,
-                                          ),
-                                        )
-                                        toast({
-                                          title: "Product updated",
-                                          description: "Product details have been updated successfully.",
-                                        })
-                                        setEditingProduct(null)
-                                      }
-                                    }}
-                                    className="gradient-primary text-white border-0 hover:opacity-90"
-                                  >
-                                    Save Changes
-                                  </Button>
-                                  <Button variant="outline" onClick={() => setEditingProduct(null)}>
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
+                          <Link href={`/products/${product.id}`}>
+                            <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Link href={`/admin/inventory/edit/${product.id}`}>
+                            <Button variant="ghost" size="icon">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -420,10 +345,11 @@ export default function AdminInventoryPage() {
                           </Button>
                         </div>
                       </td>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
             </div>
           </div>
         </motion.div>

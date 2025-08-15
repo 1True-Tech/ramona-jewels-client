@@ -93,8 +93,9 @@ export default function CategoriesPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          
         >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Categories Management</h1>
             <p className="text-muted-foreground">Manage product types and their categories</p>
@@ -158,7 +159,8 @@ export default function CategoriesPage() {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
+            </div>
+            </div>
         </motion.div>
 
         {/* Search and View Controls */}
@@ -166,8 +168,8 @@ export default function CategoriesPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-col sm:flex-row gap-4"
         >
+          <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -192,7 +194,8 @@ export default function CategoriesPage() {
             >
               <List className="h-4 w-4" />
             </Button>
-          </div>
+            </div>
+            </div>
         </motion.div>
 
         {/* Product Types */}
@@ -367,8 +370,8 @@ export default function CategoriesPage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="p-4 hover:bg-muted/50 transition-colors"
                     >
+                      <div className="p-4 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="text-2xl">{productType.icon}</div>
@@ -393,6 +396,7 @@ export default function CategoriesPage() {
                             </Button>
                           </div>
                         </div>
+                       </div>
                       </div>
                     </motion.div>
                   ))}
