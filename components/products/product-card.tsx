@@ -13,7 +13,7 @@ import { useWishlist } from "@/contexts/wishlist-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
-interface Product {
+export interface Product {
   id: string
   name: string
   price: number
@@ -42,7 +42,7 @@ export function ProductCard({ product }: ProductCardProps) {
       toast({
         title: "Login required",
         description: "Please log in to add items to your cart.",
-        variant: "destructive",
+        // variant: "destructive",
       })
       return
     }
@@ -66,7 +66,7 @@ export function ProductCard({ product }: ProductCardProps) {
       toast({
         title: "Login required",
         description: "Please log in to add items to your wishlist.",
-        variant: "destructive",
+        // variant: "destructive",
       })
       return
     }

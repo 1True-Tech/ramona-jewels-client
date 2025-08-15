@@ -92,7 +92,7 @@ export default function OrderDetailPage() {
       toast({
         title: "Failed to copy",
         description: "Could not copy order ID to clipboard",
-        variant: "destructive"
+        // variant: "destructive"
       })
     }
   }

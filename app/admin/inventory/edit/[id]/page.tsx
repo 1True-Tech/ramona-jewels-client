@@ -262,7 +262,7 @@ export default function EditProductPage() {
                     </div>
                     <div>
                       <Label htmlFor="longevity">Longevity</Label>
-                      <Input id="longevity" defaultValue={(product as PerfumeProduct).longevity || ""} />
+                      <Input id="longevity" defaultValue={String((product as PerfumeProduct).longevity ?? "0")} />
                     </div>
                   </div>
                 )}

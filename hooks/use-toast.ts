@@ -2,16 +2,16 @@
 
 import * as React from "react"
 
-import type { ToastActionElement, ToastProps } from "@/components/ui/sonner"
+import type { ToasterProps, Action as ToasterAction } from "sonner"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-type ToasterToast = ToastProps & {
+type ToasterToast = ToasterProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
-  action?: ToastActionElement
+  action?: ToasterAction
 }
 
 const actionTypes = {
@@ -149,10 +149,11 @@ function toast({ ...props }: Toast) {
     toast: {
       ...props,
       id,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss()
-      },
+      // fix this issue, the toast initself has error
+      // open: true,
+      // onOpenChange: (open) => {
+      //   if (!open) dismiss()
+      // },
     },
   })
 

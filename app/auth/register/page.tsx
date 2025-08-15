@@ -56,7 +56,7 @@ export default function RegisterPage() {
       toast({
         title: "Registration failed",
         description: "Please try again with different credentials.",
-        variant: "destructive",
+        // variant: "destructive",
       })
     } finally {
       setIsLoading(false)
