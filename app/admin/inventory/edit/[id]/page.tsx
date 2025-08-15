@@ -73,9 +73,9 @@ export default function EditProductPage() {
         <div className="space-y-8">
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-2">Product Not Found</h2>
-            <p className="text-muted-foreground mb-4">The product you're looking for doesn't exist.</p>
-            <Link href="/admin/products">
-              <Button>Back to Products</Button>
+            <p className="text-muted-foreground mb-4">The product you are looking for does not exist.</p>
+            <Link href="/admin/inventory">
+              <Button>Back to Inventory</Button>
             </Link>
           </div>
         </div>
@@ -89,7 +89,7 @@ export default function EditProductPage() {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-4 mb-4">
-            <Link href="/admin/products">
+            <Link href="/admin/inventory">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -115,8 +115,13 @@ export default function EditProductPage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="lg:col-span-2 space-y-6"
-          >
+            style={{
+            gridColumn: 'span 2 / span 2', // This applies for lg breakpoint — you can't fully replicate responsive breakpoints with inline styles alone
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem', // space-y-6 = 1.5rem gap between children vertically
+            }}
+            >
             {/* Basic Information */}
             <Card className="shadow-none">
               <CardHeader>
@@ -270,8 +275,8 @@ export default function EditProductPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="space-y-6"
           >
+            <div className="space-y-6">
             {/* Product Image */}
             <Card className="shadow-none">
               <CardHeader>
@@ -320,6 +325,7 @@ export default function EditProductPage() {
                 </Button>
               </CardContent>
             </Card>
+            </div>
           </motion.div>
         </div>
       </div>

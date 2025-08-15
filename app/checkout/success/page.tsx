@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
+import { useOrderTracking } from "@/contexts/order-tracking-context"
 
 interface Order {
   id: string
@@ -45,6 +46,7 @@ function OrderSuccess() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
+  const { initializeTracking } = useOrderTracking()
   
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -64,13 +66,23 @@ function OrderSuccess() {
       return
     }
 
-    setOrder({
+    const orderData = {
       ...foundOrder,
       estimatedDelivery: new Date(foundOrder.estimatedDelivery),
       createdAt: new Date(foundOrder.createdAt)
+    }
+    
+    setOrder(orderData)
+    
+    // Initialize order tracking
+    initializeTracking(orderId, {
+      trackingNumber: `TRK${orderId.slice(-8).toUpperCase()}`,
+      carrier: 'Ramona Express',
+      estimatedDelivery: orderData.estimatedDelivery
     })
+    
     setIsLoading(false)
-  }, [orderId, router])
+  }, [orderId, router, initializeTracking])
 
   if (isLoading || !order) {
     return (
