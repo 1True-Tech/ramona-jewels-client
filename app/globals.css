@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@custom-variant hover (&hover);
+@custom-variant hover (&:hover);
 
 /* Root Variables */
 :root {
