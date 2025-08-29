@@ -9,7 +9,14 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
+import { 
+  useGetUsersQuery,
+  useGetUserStatsQuery,
+  useGetTopUsersQuery,
+  useUpdateUserStatusMutation,
+  useDeleteUserMutation
+} from "@/store/api/usersApi"
 import { 
   Search, 
   Filter, 
@@ -21,69 +28,35 @@ import {
   Mail,
   Phone,
   Calendar,
+  CircleUserRound,
   Shield,
-  User
+  User,
+  Crown,
+  TrendingUp
 } from "lucide-react"
-
-// Mock users data
-const mockUsers = [
-  {
-    id: "1",
-    name: "Alice Johnson",
-    email: "alice@example.com",
-    phone: "+1 (555) 123-4567",
-    role: "customer",
-    status: "active",
-    joinDate: "2024-01-15",
-    orders: 12,
-    totalSpent: 2450.00,
-    avatar: "/placeholder.svg"
-  },
-  {
-    id: "2",
-    name: "Bob Smith",
-    email: "bob@example.com",
-    phone: "+1 (555) 987-6543",
-    role: "customer",
-    status: "active",
-    joinDate: "2024-02-20",
-    orders: 8,
-    totalSpent: 1890.00,
-    avatar: "/placeholder.svg"
-  },
-  {
-    id: "3",
-    name: "Carol Davis",
-    email: "carol@example.com",
-    phone: "+1 (555) 456-7890",
-    role: "admin",
-    status: "active",
-    joinDate: "2023-12-01",
-    orders: 0,
-    totalSpent: 0,
-    avatar: "/placeholder.svg"
-  },
-  {
-    id: "4",
-    name: "David Wilson",
-    email: "david@example.com",
-    phone: "+1 (555) 321-0987",
-    role: "customer",
-    status: "inactive",
-    joinDate: "2024-03-10",
-    orders: 3,
-    totalSpent: 567.00,
-    avatar: "/placeholder.svg"
-  }
-]
 
 export default function AdminUsersPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [users, setUsers] = useState(mockUsers)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRole, setSelectedRole] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+
+  // API queries
+  const { data: usersData, isLoading: usersLoading, error: usersError } = useGetUsersQuery({
+    page: currentPage,
+    limit: 20,
+    search: searchQuery || undefined,
+    role: selectedRole !== "all" ? selectedRole : undefined,
+    status: selectedStatus !== "all" ? selectedStatus : undefined,
+  })
+
+  const { data: statsData, isLoading: statsLoading } = useGetUserStatsQuery()
+  const { data: topUsersData, isLoading: topUsersLoading } = useGetTopUsersQuery({ limit: 5 })
+
+  const [updateUserStatus] = useUpdateUserStatusMutation()
+  const [deleteUser] = useDeleteUserMutation()
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -91,24 +64,49 @@ export default function AdminUsersPage() {
     }
   }, [user, router])
 
+  const users = usersData?.data || []
+  const stats = statsData?.data || {
+    total: 0,
+    active: 0,
+    inactive: 0,
+    customers: 0,
+    admins: 0,
+  }
+  const topUsers = topUsersData?.data || []
+
+  const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive') => {
+    try {
+      await updateUserStatus({ id: userId, status: newStatus }).unwrap()
+    } catch (error) {
+      console.error('Failed to update user status:', error)
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      try {
+        await deleteUser(userId).unwrap()
+      } catch (error) {
+        console.error('Failed to delete user:', error)
+      }
+    }
+  }
+
   if (!user || user.role !== "admin") {
     return null
   }
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesRole = selectedRole === "all" || user.role === selectedRole
-    const matchesStatus = selectedStatus === "all" || user.status === selectedStatus
-    
-    return matchesSearch && matchesRole && matchesStatus
-  })
-
-  const stats = {
-    total: users.length,
-    active: users.filter(u => u.status === "active").length,
-    customers: users.filter(u => u.role === "customer").length,
-    admins: users.filter(u => u.role === "admin").length
+  if (usersLoading || statsLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading users...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    )
   }
 
   return (
@@ -121,7 +119,7 @@ export default function AdminUsersPage() {
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div>
-            <h1 className="text-3xl font-bold">Users</h1>
+            <h1 className="text-3xl font-bold">Users Management</h1>
             <p className="text-muted-foreground">Manage customer accounts and administrators</p>
           </div>
           <Button className="w-full sm:w-auto">
@@ -135,7 +133,7 @@ export default function AdminUsersPage() {
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }} 
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-2 lg:grid-cols-5 gap-4"
         >
           <div className="bg-card rounded-lg border p-4">
             <div className="flex items-center justify-between">
@@ -160,6 +158,17 @@ export default function AdminUsersPage() {
           <div className="bg-card rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm font-medium text-muted-foreground">Inactive</p>
+                <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
+              </div>
+              <div className="h-8 w-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                <div className="h-3 w-3 bg-red-600 rounded-full" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-card rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">Customers</p>
                 <p className="text-2xl font-bold">{stats.customers}</p>
               </div>
@@ -175,6 +184,52 @@ export default function AdminUsersPage() {
               <Shield className="h-8 w-8 text-purple-600" />
             </div>
           </div>
+        </motion.div>
+
+        {/* Top 5 Most Active Users */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.15 }}
+          className="bg-card rounded-lg border p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Crown className="h-5 w-5 text-yellow-600" />
+            <h2 className="text-xl font-semibold">Top 5 Most Active Users</h2>
+          </div>
+          {topUsersLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {topUsers.map((topUser, index) => (
+                <div key={topUser.id} className="bg-muted/50 rounded-lg p-4 text-center">
+                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted mx-auto mb-2">
+                    <Image
+                      src={topUser.avatar || "/placeholder.svg"}
+                      alt={topUser.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <span className="text-lg font-bold text-yellow-600">#{index + 1}</span>
+                    {index === 0 && <Crown className="h-4 w-4 text-yellow-600" />}
+                  </div>
+                  <p className="font-medium text-sm truncate">{topUser.name}</p>
+                  <p className="text-xs text-muted-foreground">{topUser.orders} orders</p>
+                  <p className="text-xs font-medium text-green-600">${topUser.totalSpent.toFixed(2)}</p>
+                  <Badge 
+                    variant={topUser.status === "active" ? "default" : "secondary"}
+                    className="mt-1 text-xs"
+                  >
+                    {topUser.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Filters */}
@@ -196,7 +251,7 @@ export default function AdminUsersPage() {
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background"
+            className="px-3 py-2 border rounded-md bg-background !text-black"
           >
             <option value="all">All Roles</option>
             <option value="customer">Customers</option>
@@ -205,7 +260,7 @@ export default function AdminUsersPage() {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 border rounded-md bg-background"
+            className="px-3 py-2 border rounded-md bg-background !text-black"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -234,79 +289,103 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-muted/50">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted">
-                          <Image
-                            src={user.avatar}
-                            alt={user.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-muted-foreground sm:hidden">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 hidden sm:table-cell">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3" />
-                          {user.email}
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Phone className="h-3 w-3" />
-                          {user.phone}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 hidden md:table-cell">
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                        {user.role === "admin" ? (
-                          <>
-                            <Shield className="h-3 w-3 mr-1" />
-                            Admin
-                          </>
-                        ) : (
-                          <>
-                            <User className="h-3 w-3 mr-1" />
-                            Customer
-                          </>
-                        )}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-4 hidden lg:table-cell">
-                      <span className="font-medium">{user.orders}</span>
-                    </td>
-                    <td className="py-4 px-4 hidden lg:table-cell">
-                      <span className="font-medium">${user.totalSpent.toFixed(2)}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <Badge variant={user.status === "active" ? "default" : "secondary"}>
-                        {user.status}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <Link href={`/admin/users/${user.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                      {usersError ? 'Error loading users' : 'No users found'}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  users.map((user) => (
+                    <tr key={user.id} className="border-b hover:bg-muted/50">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted">
+                            {user?.avatar ? (
+                              <Image
+                                src={user.avatar}
+                                alt={user?.name || "User avatar"}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <CircleUserRound />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm text-muted-foreground sm:hidden">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 hidden sm:table-cell">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <Mail className="h-3 w-3" />
+                            {user.email}
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            {user.phone}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 hidden md:table-cell">
+                        <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                          {user.role === "admin" ? (
+                            <>
+                              <Shield className="h-3 w-3 mr-1" />
+                              Admin
+                            </>
+                          ) : (
+                            <>
+                              <User className="h-3 w-3 mr-1" />
+                              Customer
+                            </>
+                          )}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-4 hidden lg:table-cell">
+                        <span className="font-medium">{user.orders}</span>
+                      </td>
+                      <td className="py-4 px-4 hidden lg:table-cell">
+                        <span className="font-medium">${user.totalSpent.toFixed(2)}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <Badge 
+                          variant={user.status === "active" ? "default" : "secondary"}
+                          className={user.status === "active" ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
+                        >
+                          {user.status}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <Link href={`/admin/users/${user.id}`}>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleStatusChange(user.id, user.status === 'active' ? 'inactive' : 'active')}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

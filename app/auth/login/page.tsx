@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Eye, EyeOff, Store, Mail, Lock } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 const loginSchema = z.object({
@@ -69,19 +69,6 @@ export default function LoginPage() {
             </Link>
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <p className="text-muted-foreground">Sign in to your account</p>
-          </div>
-
-          {/* Demo Credentials */}
-          <div className="bg-muted/50 rounded-lg p-4 mb-6">
-            <p className="text-sm font-medium mb-2">Demo Credentials:</p>
-            <div className="text-xs space-y-1">
-              <p>
-                <strong>Admin:</strong> admin@example.com / admin123
-              </p>
-              <p>
-                <strong>User:</strong> user@example.com / user123
-              </p>
-            </div>
           </div>
 
           {/* Form */}
