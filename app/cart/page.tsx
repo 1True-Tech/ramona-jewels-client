@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Tag } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 

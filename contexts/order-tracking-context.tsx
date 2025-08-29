@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
-import { useAuth } from '@/contexts/auth-context'
+import { useAuth } from '@/contexts/redux-auth-context'
 
 export interface TrackingEvent {
   id: string

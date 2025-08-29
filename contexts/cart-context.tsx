@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { createContext, useContext, useReducer, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 
 interface CartItem {
   id: string

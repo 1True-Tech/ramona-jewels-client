@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { useOrderTracking } from "@/contexts/order-tracking-context"
 
 interface Order {
