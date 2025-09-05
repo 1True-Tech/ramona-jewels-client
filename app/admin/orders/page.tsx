@@ -8,7 +8,11 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
+import { 
+  useGetOrdersQuery,
+  useGetOrderStatsQuery
+} from "@/store/api/ordersApi"
 import { 
   Search, 
   Filter, 
@@ -23,85 +27,61 @@ import {
   Calendar,
 } from "lucide-react"
 
-// Mock orders data
-const mockOrders = [
-  {
-    id: "ORD-001",
-    customerName: "Alice Johnson",
-    customerEmail: "alice@example.com",
-    date: "2024-03-15",
-    status: "delivered",
-    total: 299.99,
-    items: 2,
-    products: [
-      { name: "Midnight Rose", image: "/placeholder.svg", quantity: 1, price: 149.99 },
-      { name: "Ocean Breeze", image: "/placeholder.svg", quantity: 1, price: 150.00 }
-    ],
-    shippingAddress: "123 Main St, New York, NY 10001"
-  },
-  {
-    id: "ORD-002",
-    customerName: "Bob Smith",
-    customerEmail: "bob@example.com",
-    date: "2024-03-14",
-    status: "shipped",
-    total: 189.99,
-    items: 1,
-    products: [
-      { name: "Velvet Oud", image: "/placeholder.svg", quantity: 1, price: 189.99 }
-    ],
-    shippingAddress: "456 Oak Ave, Los Angeles, CA 90210"
-  },
-  {
-    id: "ORD-003",
-    customerName: "Carol Davis",
-    customerEmail: "carol@example.com",
-    date: "2024-03-13",
-    status: "processing",
-    total: 449.99,
-    items: 3,
-    products: [
-      { name: "Garden Party", image: "/placeholder.svg", quantity: 1, price: 179.99 },
-      { name: "Citrus Burst", image: "/placeholder.svg", quantity: 1, price: 135.00 },
-      { name: "Mystic Woods", image: "/placeholder.svg", quantity: 1, price: 135.00 }
-    ],
-    shippingAddress: "789 Pine St, Chicago, IL 60601"
-  },
-  {
-    id: "ORD-004",
-    customerName: "David Wilson",
-    customerEmail: "david@example.com",
-    date: "2024-03-12",
-    status: "pending",
-    total: 225.00,
-    items: 1,
-    products: [
-      { name: "Royal Amber", image: "/placeholder.svg", quantity: 1, price: 225.00 }
-    ],
-    shippingAddress: "321 Elm St, Miami, FL 33101"
-  },
-  {
-    id: "ORD-005",
-    customerName: "Eva Brown",
-    customerEmail: "eva@example.com",
-    date: "2024-03-11",
-    status: "cancelled",
-    total: 167.50,
-    items: 1,
-    products: [
-      { name: "Floral Dream", image: "/placeholder.svg", quantity: 1, price: 167.50 }
-    ],
-    shippingAddress: "654 Maple Dr, Seattle, WA 98101"
-  }
-]
 
 export default function AdminOrdersPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [orders, setOrders] = useState(mockOrders)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
-  const [dateFilter, setDateFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all")
+  
+  // Helper to derive start/end dates from dateFilter
+  const getDateRange = (filter: "all" | "today" | "week" | "month") => {
+    const now = new Date()
+    let start: string | undefined
+    let end: string | undefined
+    switch (filter) {
+      case "today": {
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+        start = startOfDay.toISOString()
+        end = endOfDay.toISOString()
+        break
+      }
+      case "week": {
+        const startOfWeek = new Date(now)
+        startOfWeek.setDate(now.getDate() - 7)
+        start = startOfWeek.toISOString()
+        end = now.toISOString()
+        break
+      }
+      case "month": {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        start = startOfMonth.toISOString()
+        end = now.toISOString()
+        break
+      }
+      default:
+        start = undefined
+        end = undefined
+    }
+    return { startDate: start, endDate: end }
+  }
+
+  const { startDate, endDate } = getDateRange(dateFilter)
+  
+  const { data: ordersResponse, isLoading: ordersLoading, error: ordersError } = useGetOrdersQuery({
+     ...(searchQuery ? { search: searchQuery } : {}),
+     ...(selectedStatus === "all" ? {} : { status: selectedStatus }),
+     ...(startDate ? { startDate } : {}),
+     ...(endDate ? { endDate } : {})
+   })
+   
+   const { data: statsResponse, isLoading: statsLoading } = useGetOrderStatsQuery()
+   
+   const orders = ordersResponse?.data || []
+   const stats = statsResponse?.data
+  // removed unused mutations
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -113,23 +93,24 @@ export default function AdminOrdersPage() {
     return null
   }
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = selectedStatus === "all" || order.status === selectedStatus
-    
-    return matchesSearch && matchesStatus
-  })
+  if (ordersLoading || statsLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    )
+  }
 
-  const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === "pending").length,
-    processing: orders.filter(o => o.status === "processing").length,
-    shipped: orders.filter(o => o.status === "shipped").length,
-    delivered: orders.filter(o => o.status === "delivered").length,
-    cancelled: orders.filter(o => o.status === "cancelled").length,
-    totalRevenue: orders.reduce((sum, order) => sum + order.total, 0)
+  if (ordersError) {
+    return (
+      <AdminLayout>
+        <div className="text-center text-red-600 p-8">
+          Error loading orders. Please try again.
+        </div>
+      </AdminLayout>
+    )
   }
 
   const getStatusColor = (status: string) => {
@@ -186,7 +167,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-2xl font-bold">{stats?.total || 0}</p>
               </div>
               <ShoppingCart className="h-8 w-8 text-primary" />
             </div>
@@ -195,7 +176,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold">${stats.totalRevenue.toFixed(0)}</p>
+                <p className="text-2xl font-bold">${stats?.totalRevenue?.toFixed(0) || 0}</p>
               </div>
               <DollarSign className="h-8 w-8 text-green-600" />
             </div>
@@ -204,7 +185,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
+                <p className="text-2xl font-bold text-orange-600">{stats?.pending || 0}</p>
               </div>
               <Clock className="h-8 w-8 text-orange-600" />
             </div>
@@ -213,7 +194,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Processing</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.processing}</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats?.processing || 0}</p>
               </div>
               <Package className="h-8 w-8 text-yellow-600" />
             </div>
@@ -222,7 +203,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Shipped</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.shipped}</p>
+                <p className="text-2xl font-bold text-blue-600">{stats?.shipped || 0}</p>
               </div>
               <Truck className="h-8 w-8 text-blue-600" />
             </div>
@@ -231,7 +212,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Delivered</p>
-                <p className="text-2xl font-bold text-green-600">{stats.delivered}</p>
+                <p className="text-2xl font-bold text-green-600">{stats?.delivered || 0}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
@@ -268,7 +249,7 @@ export default function AdminOrdersPage() {
           </select>
           <select
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onChange={(e) => setDateFilter(e.target.value as "all" | "today" | "week" | "month")}
             className="px-3 py-2 border rounded-md bg-background"
           >
             <option value="all">All Time</option>
@@ -299,7 +280,7 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => (
+                {orders.map((order) => (
                   <tr key={order.id} className="border-b border-amber-300 hover:bg-muted/50">
                     <td className="py-4 px-4">
                       <div>
@@ -320,7 +301,7 @@ export default function AdminOrdersPage() {
                     <td className="py-4 px-4 hidden md:table-cell">
                       <div className="flex items-center gap-1 text-sm">
                         <Calendar className="h-3 w-3" />
-                        {new Date(order.date).toLocaleDateString()}
+                        {new Date(order.createdAt).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -331,10 +312,10 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="py-4 px-4 hidden lg:table-cell">
                       <div>
-                        <p className="font-medium">{order.items} items</p>
+                        <p className="font-medium">{order.items.length} items</p>
                         <p className="text-sm text-muted-foreground">
-                          {order.products.slice(0, 2).map(p => p.name).join(", ")}
-                          {order.products.length > 2 && ` +${order.products.length - 2} more`}
+                          {order.items.slice(0, 2).map((i: any) => i.name).join(", ")}
+                          {order.items.length > 2 && ` +${order.items.length - 2} more`}
                         </p>
                       </div>
                     </td>

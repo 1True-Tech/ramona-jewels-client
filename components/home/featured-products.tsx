@@ -31,7 +31,7 @@ export function FeaturedProducts() {
         );
 
   return (
-    <section className="py-16 lg:py-24 px-[16px] md:px-6 lg:px-[8.5rem]">
+    <section className="py-16 lg:py-24 px-[16px] md:px-6 lg:px-[5rem] xl:px-[8.5rem]">
       <div className="w-full mx-auto">
         {/* Header */}
         <motion.div

@@ -10,13 +10,14 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/redux-auth-context"
+import { UserAvatar } from "@/components/ui/user-avatar"
 import { 
-  useGetUsersQuery,
+  useGetAdminUsersQuery,
   useGetUserStatsQuery,
   useGetTopUsersQuery,
   useUpdateUserStatusMutation,
   useDeleteUserMutation
-} from "@/store/api/usersApi"
+} from "@/store/api/adminApi"
 import { 
   Search, 
   Filter, 
@@ -34,6 +35,7 @@ import {
   Crown,
   TrendingUp
 } from "lucide-react"
+import { Loader } from "@/components/ui/loader"
 
 export default function AdminUsersPage() {
   const { user } = useAuth()
@@ -44,7 +46,7 @@ export default function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(1)
 
   // API queries
-  const { data: usersData, isLoading: usersLoading, error: usersError } = useGetUsersQuery({
+  const { data: usersData, isLoading: usersLoading, error: usersError } = useGetAdminUsersQuery({
     page: currentPage,
     limit: 20,
     search: searchQuery || undefined,
@@ -53,7 +55,7 @@ export default function AdminUsersPage() {
   })
 
   const { data: statsData, isLoading: statsLoading } = useGetUserStatsQuery()
-  const { data: topUsersData, isLoading: topUsersLoading } = useGetTopUsersQuery({ limit: 5 })
+  const { data: topUsersData, isLoading: topUsersLoading } = useGetTopUsersQuery()
 
   const [updateUserStatus] = useUpdateUserStatusMutation()
   const [deleteUser] = useDeleteUserMutation()
@@ -76,7 +78,7 @@ export default function AdminUsersPage() {
 
   const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive') => {
     try {
-      await updateUserStatus({ id: userId, status: newStatus }).unwrap()
+      await updateUserStatus({ id: userId, isActive: newStatus === 'active' }).unwrap()
     } catch (error) {
       console.error('Failed to update user status:', error)
     }
@@ -99,12 +101,7 @@ export default function AdminUsersPage() {
   if (usersLoading || statsLoading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading users...</p>
-          </div>
-        </div>
+        <Loader message="Loading users..."/>
       </AdminLayout>
     )
   }
@@ -300,18 +297,11 @@ export default function AdminUsersPage() {
                     <tr key={user.id} className="border-b hover:bg-muted/50">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted">
-                            {user?.avatar ? (
-                              <Image
-                                src={user.avatar}
-                                alt={user?.name || "User avatar"}
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <CircleUserRound />
-                            )}
-                          </div>
+                          <UserAvatar 
+                            user={user} 
+                            size="md" 
+                            className="flex-shrink-0"
+                          />
                           <div>
                             <p className="font-medium">{user.name}</p>
                             <p className="text-sm text-muted-foreground sm:hidden">{user.email}</p>

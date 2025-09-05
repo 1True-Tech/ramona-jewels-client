@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { AdminErrorFallback } from "@/components/admin/admin-error-boundary"
+import { UserAvatar } from "@/components/ui/user-avatar"
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -119,11 +120,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* User info */}
           <div className="border-t border-gray-200 p-4 shrink-0 flex items-center justify-between w-full">
             <Link href={user ? "/profile" : "/auth/login"} className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground text-sm font-medium">
-                  {user?.name?.charAt(0)}
-                </span>
-              </div>
+              <UserAvatar 
+                user={user} 
+                size="sm" 
+                className="flex-shrink-0"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user?.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>

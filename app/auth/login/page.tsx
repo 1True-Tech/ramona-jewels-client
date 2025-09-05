@@ -44,13 +44,14 @@ export default function LoginPage() {
       toast({
         title: "Welcome back!",
         description: "You have been successfully logged in.",
+        variant: "success",
       })
       router.push("/")
     } catch (error) {
       toast({
         title: "Login failed",
         description: "Please check your credentials and try again.",
-        // variant: "destructive",
+        variant: "destructive",
       })
     } finally {
       setIsLoading(false)

@@ -9,6 +9,7 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { UserAvatar } from "@/components/ui/user-avatar"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { 
   ArrowLeft,
@@ -61,24 +62,30 @@ const mockOrders = [
     date: "2024-03-10",
     status: "delivered",
     total: 299.99,
-    items: 2,
-    products: ["Midnight Rose", "Ocean Breeze"]
+    items: [
+      { id: "1", name: "Midnight Rose" },
+      { id: "2", name: "Ocean Breeze" }
+    ]
   },
   {
     id: "ORD-002",
     date: "2024-03-05",
     status: "shipped",
     total: 189.99,
-    items: 1,
-    products: ["Velvet Oud"]
+    items: [
+      { id: "3", name: "Velvet Oud" }
+    ]
   },
   {
     id: "ORD-003",
     date: "2024-02-28",
     status: "processing",
     total: 449.99,
-    items: 3,
-    products: ["Garden Party", "Citrus Burst", "Mystic Woods"]
+    items: [
+      { id: "4", name: "Garden Party" },
+      { id: "5", name: "Citrus Burst" },
+      { id: "6", name: "Mystic Woods" }
+    ]
   }
 ]
 
@@ -144,14 +151,11 @@ export default function AdminUserProfilePage() {
         >
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="flex items-center gap-4">
-              <div className="relative w-20 h-20 rounded-full overflow-hidden bg-muted">
-                <Image
-                  src={user.avatar}
-                  alt={user.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+              <UserAvatar 
+                user={user} 
+                size="xl" 
+                className="w-20 h-20"
+              />
               <div>
                 <h1 className="text-2xl font-bold">{user.name}</h1>
                 <div className="flex items-center gap-2 mt-1">
@@ -313,10 +317,10 @@ export default function AdminUserProfilePage() {
                           </td>
                           <td className="py-4 px-6">
                             <div>
-                              <p className="font-medium">{order.items} items</p>
+                              <p className="font-medium">{order.items.length} items</p>
                               <p className="text-sm text-muted-foreground">
-                                {order.products.slice(0, 2).join(", ")}
-                                {order.products.length > 2 && ` +${order.products.length - 2} more`}
+                                {order.items.slice(0, 2).map((i: any) => i.name).join(", ")}
+                                {order.items.length > 2 && ` +${order.items.length - 2} more`}
                               </p>
                             </div>
                           </td>

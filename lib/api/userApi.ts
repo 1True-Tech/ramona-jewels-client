@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { store } from '@/store'
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
 const userApi = axios.create({
   baseURL: `${baseUrl}/users`,
@@ -11,12 +12,83 @@ const userApi = axios.create({
 
 // Add auth token to requests
 userApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  // Get token from Redux store instead of localStorage directly
+  const state = store.getState()
+  const token = state.auth.token
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
+
+// Add response interceptor to handle errors
+userApi.interceptors.response.use(
+  (response) => {
+    return response
+  },
+  (error) => {
+    // Handle server errors and format them properly
+    if (error.response?.data) {
+      const serverError = error.response.data
+      
+      // If server returns validation errors array, format them
+      if (serverError.errors && Array.isArray(serverError.errors)) {
+        const formattedErrors: Record<string, string[]> = {}
+        
+        serverError.errors.forEach((err: any) => {
+          const field = err.field || 'general'
+          if (!formattedErrors[field]) {
+            formattedErrors[field] = []
+          }
+          formattedErrors[field].push(err.message)
+        })
+        
+        // Create a structured error response
+        const errorResponse = {
+          success: false,
+          message: serverError.message || 'Validation failed',
+          errors: formattedErrors
+        }
+        
+        // Reject with the formatted error
+        return Promise.reject({
+          ...error,
+          response: {
+            ...error.response,
+            data: errorResponse
+          }
+        })
+      }
+      
+      // For other server errors, ensure consistent format
+      const errorResponse = {
+        success: false,
+        message: serverError.message || serverError.error || 'An error occurred',
+        errors: serverError.errors || null
+      }
+      
+      return Promise.reject({
+        ...error,
+        response: {
+          ...error.response,
+          data: errorResponse
+        }
+      })
+    }
+    
+    // For network errors or other issues
+    return Promise.reject({
+      ...error,
+      response: {
+        data: {
+          success: false,
+          message: error.message || 'Network error occurred',
+          errors: null
+        }
+      }
+    })
+  }
+)
 
 export interface UpdateProfileData {
   name?: string
@@ -33,7 +105,7 @@ export interface UpdateProfileData {
   preferences?: {
     notifications?: boolean
     newsletter?: boolean
-    twoFactor?: boolean
+    twoFactorAuth?: boolean
   }
 }
 
@@ -70,10 +142,22 @@ export const userApiService = {
 
   // Upload avatar
   uploadAvatar: async (file: File): Promise<ApiResponse> => {
+    // Validate file type (only images, no SVG or video)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Please upload a valid image file (JPEG, PNG, GIF, or WebP)')
+    }
+    
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      throw new Error('File size must be less than 5MB')
+    }
+    
     const formData = new FormData()
     formData.append('avatar', file)
     
-    const response = await userApi.post('/avatar', formData, {
+    const response = await userApi.post('/upload-avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

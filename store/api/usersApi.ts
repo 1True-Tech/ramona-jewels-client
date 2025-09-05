@@ -1,41 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { RootState } from '../index'
+import { TopUsersResponse, User, UsersResponse, UserStatsResponse } from '../../app/types'
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  phone: string
-  role: 'customer' | 'admin'
-  status: 'active' | 'inactive'
-  joinDate: string
-  orders: number
-  totalSpent: number
-  avatar: string
-  lastActivity?: string
-}
-
-export interface UsersResponse {
-  success: boolean
-  data: User[]
-  total: number
-}
-
-export interface UserStatsResponse {
-  success: boolean
-  data: {
-    total: number
-    active: number
-    inactive: number
-    customers: number
-    admins: number
-  }
-}
-
-export interface TopUsersResponse {
-  success: boolean
-  data: User[]
-}
 
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL + '/admin',

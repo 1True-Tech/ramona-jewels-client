@@ -12,25 +12,20 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { ResponseModal } from "@/components/ui/response-modal"
-import { 
-  User, 
+import {  
   Mail, 
-  Phone, 
-  MapPin, 
   Calendar, 
   Shield, 
   Edit, 
   Save,
   Camera,
-  Package,
-  Heart,
-  CreditCard,
   Bell,
-  Lock,
   Eye,
   EyeOff,
   Loader2,
-  Key
+  Key,
+  X,
+  CornerUpLeft
 } from "lucide-react"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { userApiService, UpdateProfileData, ChangePasswordData } from "@/lib/api/userApi"
@@ -41,34 +36,11 @@ import {
   hasFieldError,
   ValidationResult 
 } from "@/lib/validations/profileValidation"
+import { UserProfile } from "../types"
+import { useRouter } from "next/navigation"
+import { Loader } from "@/components/ui/loader"
+import { getUserAvatarUrl, hasUserProfileImage } from "@/lib/utils/imageUtils"
 
-interface UserProfile {
-  id: string
-  name: string
-  email: string
-  phone: string
-  avatar: string
-  role: "admin" | "user"
-  joinDate: string
-  address: {
-    street: string
-    city: string
-    state: string
-    zipCode: string
-    country: string
-  }
-  bio: string
-  preferences: {
-    notifications: boolean
-    newsletter: boolean
-    twoFactor: boolean
-  }
-  stats: {
-    orders: number
-    wishlist: number
-    reviews: number
-  }
-}
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth()
@@ -90,39 +62,52 @@ export default function ProfilePage() {
     errors: {} as Record<string, string[]>
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   
   const [profile, setProfile] = useState<UserProfile>({
-    id: user?.id || "",
+    _id: user?._id || "",
     name: user?.name || "",
     email: user?.email || "",
     phone: user?.phone || "",
     avatar: user?.avatar || "/placeholder.svg",
     role: user?.role || "user",
-    joinDate: user?.joinDate || "2023-01-15",
+    bio: user?.bio || "Passionate about luxury jewelry and fine fragrances. Admin at Ramona Jewels with over 5 years of experience in the luxury retail industry.",
     address: {
-      street: "123 Main Street",
-      city: "New York",
-      state: "NY",
-      zipCode: "10001",
-      country: "United States"
+      street: user?.address?.street || "",
+      city: user?.address?.city || "",
+      state: user?.address?.state || "",
+      zipCode: user?.address?.zipCode || "",
+      country: user?.address?.country || ""
     },
-    bio: "Passionate about luxury jewelry and fine fragrances. Admin at Ramona Jewels with over 5 years of experience in the luxury retail industry.",
     preferences: {
-      notifications: true,
-      newsletter: true,
-      twoFactor: false
+      notifications: user?.preferences?.notifications || true,
+      newsletter: user?.preferences?.newsletter || false,
+      twoFactorAuth: user?.preferences?.twoFactorAuth || false
     },
     stats: {
-      orders: 24,
-      wishlist: 12,
-      reviews: 8
-    }
+      totalOrders: user?.stats?.totalOrders || 0,
+      wishlistItems: user?.stats?.wishlistItems || 0,
+      reviewsCount: user?.stats?.reviewsCount || 0,
+      totalSpent: user?.stats?.totalSpent || 0
+    },
+    createdAt: user?.createdAt || "",
+    isActive: user?.isActive || true
   })
 
   // Load profile data on component mount
   useEffect(() => {
     loadProfile()
   }, [])
+
+  // Cleanup image preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview)
+      }
+    }
+  }, [imagePreview])
 
   const loadProfile = async () => {
     try {
@@ -165,23 +150,56 @@ export default function ProfilePage() {
         return
       }
 
+      let updatedProfile = { ...profile }
+
+      // Handle avatar upload first if there's a selected file
+      if (selectedFile) {
+        try {
+          const avatarResponse = await userApiService.uploadAvatar(selectedFile)
+          if (avatarResponse.success && avatarResponse.data?.avatar) {
+            updatedProfile.avatar = avatarResponse.data.avatar
+            // Clear preview and selected file
+            setImagePreview(null)
+            setSelectedFile(null)
+            if (fileInputRef.current) {
+              fileInputRef.current.value = ''
+            }
+          } else {
+            showModal('error', 'Avatar Upload Failed', avatarResponse.message || 'Failed to upload avatar.')
+            return
+          }
+        } catch (avatarError: any) {
+          console.error('Avatar upload error:', avatarError)
+          showModal('error', 'Avatar Upload Failed', avatarError.response?.data?.message || 'An unexpected error occurred while uploading your avatar.')
+          return
+        }
+      }
+
       // Prepare update data
       const updateData: UpdateProfileData = {
-        name: profile.name,
-        email: profile.email,
-        phone: profile.phone,
-        bio: profile.bio,
-        address: profile.address,
-        preferences: profile.preferences
+        name: updatedProfile.name,
+        email: updatedProfile.email,
+        phone: updatedProfile.phone,
+        bio: updatedProfile.bio,
+        address: updatedProfile.address,
+        preferences: {
+          notifications: updatedProfile.preferences.notifications,
+          newsletter: updatedProfile.preferences.newsletter,
+          twoFactorAuth: updatedProfile.preferences.twoFactorAuth
+        }
       }
 
       // Call API to update profile
       const response = await userApiService.updateProfile(updateData)
       
       if (response.success) {
+        // Update local profile state with the new avatar if it was uploaded
+        setProfile(updatedProfile)
+        
         // Update auth context with new user data
         if (updateUser && response.data) {
-          updateUser(response.data)
+          const updatedUserData = { ...response.data, avatar: updatedProfile.avatar }
+          updateUser(updatedUserData)
         }
         
         setIsEditing(false)
@@ -191,7 +209,13 @@ export default function ProfilePage() {
       }
     } catch (error: any) {
       console.error('Profile update error:', error)
-      showModal('error', 'Update Failed', error.response?.data?.message || 'An unexpected error occurred while updating your profile.')
+      const errorData = error.response?.data
+      showModal(
+        'error', 
+        'Update Failed', 
+        errorData?.message || 'An unexpected error occurred while updating your profile.',
+        errorData?.errors
+      )
     } finally {
       setIsSaving(false)
     }
@@ -223,19 +247,26 @@ export default function ProfilePage() {
       }
     } catch (error: any) {
       console.error('Password change error:', error)
-      showModal('error', 'Password Change Failed', error.response?.data?.message || 'An unexpected error occurred while changing your password.')
+      const errorData = error.response?.data
+      showModal(
+        'error', 
+        'Password Change Failed', 
+        errorData?.message || 'An unexpected error occurred while changing your password.',
+        errorData?.errors
+      )
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file type and size
-    if (!file.type.startsWith('image/')) {
-      showModal('error', 'Invalid File', 'Please select a valid image file.')
+    // Validate file type (only images, no SVG or video)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      showModal('error', 'Invalid File', 'Please upload a valid image file (JPEG, PNG, GIF, or WebP). SVG and video files are not allowed.')
       return
     }
 
@@ -244,24 +275,22 @@ export default function ProfilePage() {
       return
     }
 
-    try {
-      setIsSaving(true)
-      const response = await userApiService.uploadAvatar(file)
-      
-      if (response.success && response.data?.avatar) {
-        setProfile(prev => ({ ...prev, avatar: response.data.avatar }))
-        if (updateUser) {
-          updateUser({ ...user, avatar: response.data.avatar })
-        }
-        showModal('success', 'Avatar Updated', 'Your profile picture has been updated successfully!')
-      } else {
-        showModal('error', 'Upload Failed', response.message || 'Failed to upload avatar.')
-      }
-    } catch (error: any) {
-      console.error('Avatar upload error:', error)
-      showModal('error', 'Upload Failed', error.response?.data?.message || 'An unexpected error occurred while uploading your avatar.')
-    } finally {
-      setIsSaving(false)
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file)
+    setImagePreview(previewUrl)
+    setSelectedFile(file)
+  }
+
+
+
+  const handleCancelPreview = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview)
+    }
+    setImagePreview(null)
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -320,64 +349,83 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <span className="ml-2 text-lg">Loading profile...</span>
-        </div>
-      </div>
+      <Loader message="Loading profile..." />
     )
   }
 
+  // Back to previous route
+  const router = useRouter()
+
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-6 max-w-7xl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6"
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Profile</h1>
-            <p className="text-muted-foreground">Manage your account settings and preferences</p>
-          </div>
-          <div className="flex gap-3">
-            {isEditing ? (
-              <>
-                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
+        <div className="flex items-center gap-4 w-full">
+          <Button onClick={() => router.back()} variant="link" className="text-lg flex items-center gap-2">
+            <CornerUpLeft className="text-2xl"/>
+            Back
+          </Button>
+          <div className="flex items-center justify-end md:justify-between w-full">
+            <div className="hidden md:inline-block">
+              <h1 className="text-3xl font-bold">Profile</h1>
+              <p className="text-muted-foreground">Manage your account settings and preferences</p>
+            </div>
+            <div className="flex gap-3">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setIsEditing(true)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => setIsEditing(true)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Profile
-              </Button>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
         {/* Profile Overview */}
         <Card>
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="flex flex-col md:flex-row items-center md:items-center gap-6">
               <div className="relative">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile.avatar} alt={profile.name} />
-                  <AvatarFallback className="text-lg bg-yellow-500 text-white md:text-4xl">
-                    {profile.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
+                {imagePreview ? (
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={imagePreview} alt="Preview" />
+                    <AvatarFallback className="text-lg bg-gray-200 text-gray-600">
+                      Preview
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Avatar className = "h-20 w-20">
+                    {hasUserProfileImage(profile) ? (
+                      <AvatarImage 
+                        src={getUserAvatarUrl(profile.avatar) || profile.avatar} 
+                        alt={profile.name} 
+                        className="object-cover"
+                      />
+                    ) : null}
+                    <AvatarFallback className="text-md bg-yellow-500 text-white md:text-xl font-bold letter-spacing-3">
+                      {profile.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 {isEditing && (
                   <>
                     <Button
@@ -396,8 +444,8 @@ export default function ProfilePage() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
-                      onChange={handleAvatarUpload}
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleFileSelect}
                       className="hidden"
                     />
                   </>
@@ -405,55 +453,87 @@ export default function ProfilePage() {
               </div>
               
               <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-semibold">{profile.name}</h2>
-                  <Badge variant={profile.role === "admin" ? "default" : "secondary"}>
+                <div className="flex flex-col-reverse md:flex-row items-center gap-3">
+                  <h2 className="md:text-xl font-semibold whitespace-nowrap">{profile.name}</h2>
+                  <Badge variant={profile.role === "admin" ? "default" : "secondary"} className="hidden md:inline-flex">
                     <Shield className="h-3 w-3 mr-1" />
                     {profile.role}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
+                <p className="text-muted-foreground text-sm flex items-center justify-center md:justify-start gap-2">
+                  <Mail className="h-4 w-4 hidden md:block" />
                   {profile.email}
                 </p>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Member since {new Date(profile.joinDate).toLocaleDateString()}
+                <p className="text-muted-foreground text-xs flex items-center justify-center md:justify-start gap-2">
+                  <Calendar className="h-4 w-4 hidden md:block" />
+                  Member since {new Date(profile.createdAt).toLocaleDateString()}
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-primary">{profile.stats.orders}</div>
+                  <div className="text-xl font-bold text-primary">{profile.stats.totalOrders}</div>
                   <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                    <Package className="h-3 w-3" />
                     Orders
                   </div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-primary">{profile.stats.wishlist}</div>
+                  <div className="text-xl font-bold text-primary">{profile.stats.wishlistItems}</div>
                   <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                    <Heart className="h-3 w-3" />
                     Wishlist
                   </div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-primary">{profile.stats.reviews}</div>
+                  <div className="text-xl font-bold text-primary">{profile.stats.reviewsCount}</div>
                   <div className="text-sm text-muted-foreground">Reviews</div>
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-primary">${profile.stats.totalSpent}</div>
+                  <div className="text-sm text-muted-foreground whitespace-nowrap">Total Spent</div>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Image Preview Section */}
+        {/* {imagePreview && (
+          <Card>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <Avatar className="h-32 w-32">
+                    <AvatarImage src={imagePreview} alt="Preview" />
+                    <AvatarFallback className="text-lg bg-gray-200 text-gray-600">
+                      Preview
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCancelPreview}
+                    disabled={isSaving}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )} */}
+
         {/* Profile Details */}
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="personal">Personal Info</TabsTrigger>
-            <TabsTrigger value="address">Address</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsList
+            className="flex justify-start w-full gap-5 overflow-x-auto overflow-y-hidden whitespace-nowrap snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+          >
+            <TabsTrigger value="personal" className="p-3">Personal Info</TabsTrigger>
+            <TabsTrigger value="address" className="p-3">Address</TabsTrigger>
+            <TabsTrigger value="security" className="p-3">Security</TabsTrigger>
+            <TabsTrigger value="preferences" className="p-3">Preferences</TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="personal" className="space-y-6">
             <Card>
@@ -696,11 +776,11 @@ export default function ProfilePage() {
                       <p className="text-xs text-muted-foreground">Requires authentication app</p>
                     </div>
                     <Button
-                      variant={profile.preferences.twoFactor ? "destructive" : "default"}
-                      onClick={() => handlePreferenceChange('twoFactor', !profile.preferences.twoFactor)}
+                      variant={profile.preferences.twoFactorAuth ? "destructive" : "default"}
+                      onClick={() => handlePreferenceChange('twoFactorAuth', !profile.preferences.twoFactorAuth)}
                       disabled={!isEditing}
                     >
-                      {profile.preferences.twoFactor ? "Disable" : "Enable"}
+                      {profile.preferences.twoFactorAuth ? "Disable" : "Enable"}
                     </Button>
                   </div>
                 </div>
@@ -764,6 +844,8 @@ export default function ProfilePage() {
         title={modal.title}
         message={modal.message}
         errors={modal.errors}
+        autoClose={modal.type === 'success'}
+        autoCloseDelay={3000}
       />
     </div>
   )

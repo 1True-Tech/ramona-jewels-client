@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
@@ -17,73 +17,154 @@ import {
   Tag,
   Search,
   Grid,
-  List
+  List,
+  Loader2
 } from "lucide-react"
-import { productTypes } from "@/lib/categories-data"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/redux-auth-context"
+import { useRouter } from "next/navigation"
+import {
+  useGetCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+} from "@/store/api/categoriesApi"
 
 export default function CategoriesPage() {
   const { toast } = useToast()
+  const { user } = useAuth()
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [isAddingProductType, setIsAddingProductType] = useState(false)
   const [isAddingCategory, setIsAddingCategory] = useState(false)
-  const [newProductType, setNewProductType] = useState({
-    name: "",
-    label: "",
-    description: "",
-    icon: ""
-  })
+  const [editingCategory, setEditingCategory] = useState<any>(null)
   const [newCategory, setNewCategory] = useState({
     name: "",
-    label: "",
-    description: "",
-    productTypeId: ""
+    description: ""
   })
 
-  const filteredProductTypes = productTypes.filter(type =>
-    type.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    type.description.toLowerCase().includes(searchTerm.toLowerCase())
+  // API hooks
+  const { data: categoriesData, isLoading, error, refetch } = useGetCategoriesQuery()
+  const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation()
+  const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation()
+  const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation()
+
+  useEffect(() => {
+    if (!user || user.role !== "admin") {
+      router.push("/auth/login")
+    }
+  }, [user, router])
+
+  const categories = categoriesData?.data || []
+  
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
-  const handleAddProductType = () => {
-    // In a real app, this would be an API call
-    console.log("Adding product type:", newProductType)
-    toast({
-      title: "Product Type Added",
-      description: `${newProductType.label} has been added successfully.`
-    })
-    setIsAddingProductType(false)
-    setNewProductType({ name: "", label: "", description: "", icon: "" })
+  const handleAddCategory = async () => {
+    if (!newCategory.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Category name is required.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      await createCategory(newCategory).unwrap()
+      toast({
+        title: "Category Added",
+        description: `${newCategory.name} has been added successfully.`
+      })
+      setIsAddingCategory(false)
+      setNewCategory({ name: "", description: "" })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.data?.message || "Failed to add category.",
+        variant: "destructive"
+      })
+    }
   }
 
-  const handleAddCategory = () => {
-    // In a real app, this would be an API call
-    console.log("Adding category:", newCategory)
-    toast({
-      title: "Category Added",
-      description: `${newCategory.label} has been added successfully.`
-    })
-    setIsAddingCategory(false)
-    setNewCategory({ name: "", label: "", description: "", productTypeId: "" })
+  const handleUpdateCategory = async () => {
+    if (!editingCategory || !editingCategory.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Category name is required.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      await updateCategory({
+        id: editingCategory._id,
+        data: {
+          name: editingCategory.name,
+          description: editingCategory.description
+        }
+      }).unwrap()
+      toast({
+        title: "Category Updated",
+        description: `${editingCategory.name} has been updated successfully.`
+      })
+      setEditingCategory(null)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.data?.message || "Failed to update category.",
+        variant: "destructive"
+      })
+    }
   }
 
-  const handleDeleteProductType = (productTypeId: string) => {
-    // In a real app, this would be an API call
-    console.log("Deleting product type:", productTypeId)
-    toast({
-      title: "Product Type Deleted",
-      description: "The product type has been deleted successfully."
-    })
+  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+    if (!confirm(`Are you sure you want to delete "${categoryName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await deleteCategory(categoryId).unwrap()
+      toast({
+        title: "Category Deleted",
+        description: "The category has been deleted successfully."
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.data?.message || "Failed to delete category.",
+        variant: "destructive"
+      })
+    }
   }
 
-  const handleDeleteCategory = (categoryId: string) => {
-    // In a real app, this would be an API call
-    console.log("Deleting category:", categoryId)
-    toast({
-      title: "Category Deleted",
-      description: "The category has been deleted successfully."
-    })
+  if (!user || user.role !== "admin") {
+    return null
+  }
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold mb-2">Error Loading Categories</h2>
+          <p className="text-muted-foreground mb-4">Failed to load categories. Please try again.</p>
+          <Button onClick={() => refetch()}>Retry</Button>
+        </div>
+      </AdminLayout>
+    )
   }
 
   return (
@@ -93,75 +174,115 @@ export default function CategoriesPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Categories Management</h1>
-            <p className="text-muted-foreground">Manage product types and their categories</p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Dialog open={isAddingProductType} onOpenChange={setIsAddingProductType}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product Type
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Product Type</DialogTitle>
-                  <DialogDescription>
-                    Create a new product type with its own set of categories
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="productTypeName">Name</Label>
-                    <Input
-                      id="productTypeName"
-                      value={newProductType.name}
-                      onChange={(e) => setNewProductType({ ...newProductType, name: e.target.value })}
-                      placeholder="e.g., electronics"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="productTypeLabel">Label</Label>
-                    <Input
-                      id="productTypeLabel"
-                      value={newProductType.label}
-                      onChange={(e) => setNewProductType({ ...newProductType, label: e.target.value })}
-                      placeholder="e.g., Electronics"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="productTypeIcon">Icon (Emoji)</Label>
-                    <Input
-                      id="productTypeIcon"
-                      value={newProductType.icon}
-                      onChange={(e) => setNewProductType({ ...newProductType, icon: e.target.value })}
-                      placeholder="e.g., 📱"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="productTypeDescription">Description</Label>
-                    <Textarea
-                      id="productTypeDescription"
-                      value={newProductType.description}
-                      onChange={(e) => setNewProductType({ ...newProductType, description: e.target.value })}
-                      placeholder="Describe this product type..."
-                    />
-                  </div>
-                  <Button onClick={handleAddProductType} className="w-full">
-                    Add Product Type
+            <div>
+              <h1 className="text-3xl font-bold">Categories Management</h1>
+              <p className="text-muted-foreground">Manage product categories for your store</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Category
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Category</DialogTitle>
+                    <DialogDescription>
+                      Create a new product category
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="categoryName">Name</Label>
+                      <Input
+                        id="categoryName"
+                        value={newCategory.name}
+                        onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                        placeholder="e.g., Necklaces"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="categoryDescription">Description</Label>
+                      <Textarea
+                        id="categoryDescription"
+                        value={newCategory.description}
+                        onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                        placeholder="Describe this category..."
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleAddCategory} 
+                      className="w-full"
+                      disabled={isCreating}
+                    >
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        "Add Category"
+                      )}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
-            </div>
+          </div>
         </motion.div>
+
+        {/* Edit Category Dialog */}
+        <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+              <DialogDescription>
+                Update category information
+              </DialogDescription>
+            </DialogHeader>
+            {editingCategory && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editCategoryName">Name</Label>
+                  <Input
+                    id="editCategoryName"
+                    value={editingCategory.name}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                    placeholder="e.g., Necklaces"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editCategoryDescription">Description</Label>
+                  <Textarea
+                    id="editCategoryDescription"
+                    value={editingCategory.description || ""}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                    placeholder="Describe this category..."
+                  />
+                </div>
+                <Button 
+                  onClick={handleUpdateCategory} 
+                  className="w-full"
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Category"
+                  )}
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Search and View Controls */}
         <motion.div
@@ -170,70 +291,143 @@ export default function CategoriesPage() {
           transition={{ delay: 0.1 }}
         >
           <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search product types..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search categories..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="icon"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="icon"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === "grid" ? "default" : "outline"}
-              size="icon"
-              onClick={() => setViewMode("grid")}
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "outline"}
-              size="icon"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            </div>
-            </div>
         </motion.div>
 
-        {/* Product Types */}
+        {/* Categories Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Tag className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-muted-foreground">Total Categories</p>
+                    <p className="text-2xl font-bold">{categories.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Tag className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-muted-foreground">Active Categories</p>
+                    <p className="text-2xl font-bold">{categories.filter(c => c.isActive).length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Tag className="h-8 w-8 text-orange-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-muted-foreground">Inactive Categories</p>
+                    <p className="text-2xl font-bold">{categories.filter(c => !c.isActive).length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
+
+        {/* Categories */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          {viewMode === "grid" ? (
+          {filteredCategories.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Tag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No categories found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm ? "No categories match your search." : "Get started by creating your first category."}
+                </p>
+                {!searchTerm && (
+                  <Button onClick={() => setIsAddingCategory(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Category
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProductTypes.map((productType, index) => (
+              {filteredCategories.map((category, index) => (
                 <motion.div
-                  key={productType.id}
+                  key={category._id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="text-2xl">{productType.icon}</div>
+                          <div className="p-2 bg-primary/10 rounded-lg">
+                            <Tag className="h-5 w-5 text-primary" />
+                          </div>
                           <div>
-                            <CardTitle className="text-lg">{productType.label}</CardTitle>
-                            <CardDescription>{productType.description}</CardDescription>
+                            <CardTitle className="text-lg">{category.name}</CardTitle>
+                            <CardDescription className="line-clamp-2">
+                              {category.description || "No description"}
+                            </CardDescription>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => setEditingCategory(category)}
+                          >
                             <Edit className="h-3 w-3" />
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteProductType(productType.id)}
+                            onClick={() => handleDeleteCategory(category._id, category.name)}
+                            disabled={isDeleting}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            {isDeleting ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -241,118 +435,16 @@ export default function CategoriesPage() {
                     <CardContent>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Categories</span>
-                          <Badge variant="secondary">{productType.categories.length}</Badge>
+                          <span className="text-sm text-muted-foreground">Status</span>
+                          <Badge variant={category.isActive ? "default" : "secondary"}>
+                            {category.isActive ? "Active" : "Inactive"}
+                          </Badge>
                         </div>
-                        
-                        <div className="flex flex-wrap gap-1">
-                          {productType.categories.slice(0, 3).map((category) => (
-                            <Badge key={category.id} variant="outline" className="text-xs">
-                              {category.label}
-                            </Badge>
-                          ))}
-                          {productType.categories.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{productType.categories.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="flex-1">
-                                <Tag className="h-3 w-3 mr-1" />
-                                Manage Categories
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>{productType.label} Categories</DialogTitle>
-                                <DialogDescription>
-                                  Manage categories for {productType.label}
-                                </DialogDescription>
-                              </DialogHeader>
-                              
-                              <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                  <h4 className="font-medium">Categories ({productType.categories.length})</h4>
-                                  <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
-                                    <DialogTrigger asChild>
-                                      <Button size="sm" onClick={() => setNewCategory({ ...newCategory, productTypeId: productType.id })}>
-                                        <Plus className="h-3 w-3 mr-1" />
-                                        Add Category
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                      <DialogHeader>
-                                        <DialogTitle>Add New Category</DialogTitle>
-                                        <DialogDescription>
-                                          Add a new category to {productType.label}
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <div className="space-y-4">
-                                        <div className="space-y-2">
-                                          <Label htmlFor="categoryName">Name</Label>
-                                          <Input
-                                            id="categoryName"
-                                            value={newCategory.name}
-                                            onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                                            placeholder="e.g., smartphones"
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="categoryLabel">Label</Label>
-                                          <Input
-                                            id="categoryLabel"
-                                            value={newCategory.label}
-                                            onChange={(e) => setNewCategory({ ...newCategory, label: e.target.value })}
-                                            placeholder="e.g., Smartphones"
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="categoryDescription">Description</Label>
-                                          <Textarea
-                                            id="categoryDescription"
-                                            value={newCategory.description}
-                                            onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                                            placeholder="Describe this category..."
-                                          />
-                                        </div>
-                                        <Button onClick={handleAddCategory} className="w-full">
-                                          Add Category
-                                        </Button>
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
-                                </div>
-                                
-                                <div className="space-y-2 max-h-60 overflow-y-auto">
-                                  {productType.categories.map((category) => (
-                                    <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                      <div>
-                                        <h5 className="font-medium">{category.label}</h5>
-                                        <p className="text-sm text-muted-foreground">{category.description}</p>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                          <Edit className="h-3 w-3" />
-                                        </Button>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-8 w-8 text-destructive hover:text-destructive"
-                                          onClick={() => handleDeleteCategory(category.id)}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Created</span>
+                          <span className="text-sm">
+                            {new Date(category.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
                     </CardContent>
@@ -364,39 +456,58 @@ export default function CategoriesPage() {
             <Card>
               <CardContent className="p-0">
                 <div className="divide-y">
-                  {filteredProductTypes.map((productType, index) => (
+                  {filteredCategories.map((category, index) => (
                     <motion.div
-                      key={productType.id}
+                      key={category._id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
                     >
                       <div className="p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="text-2xl">{productType.icon}</div>
-                          <div>
-                            <h3 className="font-medium">{productType.label}</h3>
-                            <p className="text-sm text-muted-foreground">{productType.description}</p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                              <Tag className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold">{category.name}</h3>
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {category.description || "No description"}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant={category.isActive ? "default" : "secondary"} className="text-xs">
+                                  {category.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  Created {new Date(category.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <Badge variant="secondary">{productType.categories.length} categories</Badge>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => setEditingCategory(category)}
+                            >
                               <Edit className="h-3 w-3" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="icon" 
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteProductType(productType.id)}
+                              onClick={() => handleDeleteCategory(category._id, category.name)}
+                              disabled={isDeleting}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              {isDeleting ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3" />
+                              )}
                             </Button>
                           </div>
                         </div>
-                       </div>
                       </div>
                     </motion.div>
                   ))}
