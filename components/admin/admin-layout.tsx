@@ -27,7 +27,6 @@ import { UserAvatar } from "@/components/ui/user-avatar"
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Products", href: "/admin/products", icon: Package },
   { name: "Categories", href: "/admin/categories", icon: Tag },
   { name: "Inventory", href: "/admin/inventory", icon: Warehouse },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },

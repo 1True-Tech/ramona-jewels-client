@@ -1,72 +1,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { RootState } from '../index'
+import { CreateProductRequest, Product, ProductQueryParams, ProductResponse, ProductsResponse, UpdateProductRequest } from '../apiTypes'
 
-interface Product {
-  _id: string
-  name: string
-  description: string
-  price: number
-  category: string
-  brand: string
-  images: string[]
-  stock: number
-  isActive: boolean
-  specifications?: Record<string, any>
-  createdAt: string
-  updatedAt: string
-}
 
-interface ProductsResponse {
-  success: boolean
-  count: number
-  pagination?: {
-    page: number
-    limit: number
-    total: number
-    pages: number
-  }
-  data: Product[]
-}
-
-interface ProductResponse {
-  success: boolean
-  data: Product
-}
-
-interface CreateProductRequest {
-  name: string
-  description: string
-  price: number
-  category: string
-  brand: string
-  images?: string[]
-  stock: number
-  specifications?: Record<string, any>
-}
-
-interface UpdateProductRequest {
-  name?: string
-  description?: string
-  price?: number
-  category?: string
-  brand?: string
-  images?: string[]
-  stock?: number
-  isActive?: boolean
-  specifications?: Record<string, any>
-}
-
-interface ProductQueryParams {
-  page?: number
-  limit?: number
-  search?: string
-  category?: string
-  brand?: string
-  minPrice?: number
-  maxPrice?: number
-  inStock?: boolean
-  isActive?: boolean
-}
 
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL + '/perfumes',
@@ -89,7 +25,7 @@ export const productsApi = createApi({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
         
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== '') {
             searchParams.append(key, value.toString())
           }
@@ -98,12 +34,66 @@ export const productsApi = createApi({
         return `?${searchParams.toString()}`
       },
       providesTags: ['Products'],
+      transformResponse: (response: any) => {
+        // Map server Perfume fields to client Product shape
+        const mapItem = (item: any): Product => {
+          const imagesArr = Array.isArray(item.images) && item.images.length
+            ? item.images
+            : (item.image ? [item.image] : [])
+          return {
+            _id: item._id,
+            name: item.name,
+            description: item.description,
+            price: item.price,
+            category: item.category,
+            originalPrice: item.originalPrice,
+            brand: item.brand,
+            images: imagesArr,
+            stock: item.stockCount ?? item.stock ?? 0,
+            isActive: item.inStock ?? true,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            type: 'perfume',
+          }
+        }
+
+        if (Array.isArray(response?.data)) {
+          return {
+            ...response,
+            data: response.data.map(mapItem),
+          } as ProductsResponse
+        }
+        return response as ProductsResponse
+      },
     }),
     
     // Get single product
     getProduct: builder.query<ProductResponse, string>({
       query: (id) => `/${id}`,
       providesTags: (result, error, id) => [{ type: 'Product', id }],
+      transformResponse: (response: any) => {
+        const item = response?.data
+        if (!item) return response as ProductResponse
+        const imagesArr = Array.isArray(item.images) && item.images.length
+          ? item.images
+          : (item.image ? [item.image] : [])
+        const mapped: Product = {
+          _id: item._id,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          category: item.category,
+          originalPrice: item.originalPrice,
+          brand: item.brand,
+          images: imagesArr,
+          stock: item.stockCount ?? item.stock ?? 0,
+          isActive: item.inStock ?? true,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          type: 'perfume',
+        }
+        return { success: true, data: mapped } as ProductResponse
+      },
     }),
     
     // Create product (Admin only)
@@ -114,6 +104,15 @@ export const productsApi = createApi({
         body: productData,
       }),
       invalidatesTags: ['Products'],
+    }),
+
+    // Upload product images (Admin only)
+    uploadProductImages: builder.mutation<{ success: boolean; data: { urls: string[] } }, FormData>({
+      query: (formData) => ({
+        url: '/upload-images',
+        method: 'POST',
+        body: formData,
+      }),
     }),
     
     // Update product (Admin only)
@@ -141,9 +140,9 @@ export const productsApi = createApi({
     // Update product stock (Admin only)
     updateProductStock: builder.mutation<ProductResponse, { id: string; stock: number }>({
       query: ({ id, stock }) => ({
-        url: `/${id}/stock`,
-        method: 'PATCH',
-        body: { stock },
+        url: `/${id}`,
+        method: 'PUT',
+        body: { stockCount: stock },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Product', id },
@@ -151,13 +150,14 @@ export const productsApi = createApi({
       ],
     }),
     
-    // Toggle product status (Admin only)
-    toggleProductStatus: builder.mutation<ProductResponse, string>({
-      query: (id) => ({
-        url: `/${id}/toggle-status`,
-        method: 'PATCH',
+    // Toggle product status (Admin only) -> maps to "inStock"
+    toggleProductStatus: builder.mutation<ProductResponse, { id: string; inStock: boolean }>({
+      query: ({ id, inStock }) => ({
+        url: `/${id}`,
+        method: 'PUT',
+        body: { inStock },
       }),
-      invalidatesTags: (result, error, id) => [
+      invalidatesTags: (result, error, { id }) => [
         { type: 'Product', id },
         'Products',
       ],
@@ -169,6 +169,7 @@ export const {
   useGetProductsQuery,
   useGetProductQuery,
   useCreateProductMutation,
+  useUploadProductImagesMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
   useUpdateProductStockMutation,

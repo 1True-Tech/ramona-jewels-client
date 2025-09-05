@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, ReactNode } from 'react'
 import { useAppSelector, useAppDispatch } from '@/store/hooks'
 import { useLoginMutation, useRegisterMutation, useLogoutMutation, useGetMeQuery } from '@/store/api/authApi'
-import { setError, updateLastActivity } from '@/store/slices/authSlice'
+import { setError, updateLastActivity, updateUser as updateUserAction } from '@/store/slices/authSlice'
 import { useRealTimeAuth } from '@/hooks/use-real-time-auth'
 import type { User } from '@/store/slices/authSlice'
 import { store } from '@/store'
@@ -18,6 +18,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   clearError: () => void
   refetch: () => void
+  updateUser: (user: Partial<User>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -31,7 +32,7 @@ export function ReduxAuthProvider({ children }: { children: ReactNode }) {
   const [logoutMutation] = useLogoutMutation()
   
   // Auto-fetch user data if token exists but no user data
-  const { refetch } = useGetMeQuery(undefined, {
+  const { refetch, data: meData } = useGetMeQuery(undefined, {
     skip: !token || !!user,
     refetchOnMountOrArgChange: true,
   })
@@ -76,6 +77,17 @@ export function ReduxAuthProvider({ children }: { children: ReactNode }) {
     dispatch(setError(null))
   }
 
+  const updateUser = (partial: Partial<User>) => {
+    dispatch(updateUserAction(partial))
+  }
+
+  // Optionally hydrate the auth user with richer /me data when available
+  useEffect(() => {
+    if (meData?.data) {
+      dispatch(updateUserAction(meData.data))
+    }
+  }, [meData?.data, dispatch])
+
   const contextValue: AuthContextType = {
     user,
     isAuthenticated,
@@ -86,6 +98,7 @@ export function ReduxAuthProvider({ children }: { children: ReactNode }) {
     logout,
     clearError,
     refetch,
+    updateUser,
   }
 
   return (

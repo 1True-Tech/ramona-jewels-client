@@ -5,6 +5,31 @@ export interface User {
   email: string
   name: string
   role: 'user' | 'admin'
+  // Extended optional fields to align with profile page usage and server responses
+  _id?: string
+  phone?: string
+  avatar?: string
+  bio?: string
+  address?: {
+    street?: string
+    city?: string
+    state?: string
+    zipCode?: string
+    country?: string
+  }
+  preferences?: {
+    notifications?: boolean
+    newsletter?: boolean
+    twoFactorAuth?: boolean
+  }
+  stats?: {
+    totalOrders?: number
+    wishlistItems?: number
+    reviewsCount?: number
+    totalSpent?: number
+  }
+  createdAt?: string
+  isActive?: boolean
 }
 
 export interface AuthState {

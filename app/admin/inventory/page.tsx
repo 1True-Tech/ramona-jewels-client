@@ -107,7 +107,7 @@ export default function AdminInventoryPage() {
 
   const handleToggleStatus = async (productId: string, currentStatus: boolean) => {
     try {
-      await toggleProductStatus(productId).unwrap()
+      await toggleProductStatus({ id: productId, inStock: !currentStatus }).unwrap()
       toast({
         title: "Status updated",
         description: `Product ${currentStatus ? 'deactivated' : 'activated'} successfully.`,

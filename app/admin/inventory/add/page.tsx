@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
@@ -15,11 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Upload, Plus, X, Image as ImageIcon } from "lucide-react"
+import { ArrowLeft, Upload, Plus, X } from "lucide-react"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { productTypes, getCategoriesByProductType, getFieldsByProductType } from "@/lib/categories-data"
+import { useCreateProductMutation } from "@/store/api/productsApi"
+import { useUploadProductImagesMutation } from "@/store/api/productsApi"
 
 // Base product schema
 const baseProductSchema = z.object({
@@ -33,6 +35,9 @@ const baseProductSchema = z.object({
   stockCount: z.number().min(0, "Stock count must be 0 or greater"),
   inStock: z.boolean(),
 })
+
+// Ensure we construct absolute URLs for images from server responses
+const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || ''
 
 // Dynamic schema that will be extended based on product type
 const createProductSchema = (productType: string) => {
@@ -81,6 +86,9 @@ export default function AddProductPage() {
   const [availableCategories, setAvailableCategories] = useState<any[]>([])
   const [productTypeFields, setProductTypeFields] = useState<any[]>([])
   const [images, setImages] = useState<string[]>([])
+  const [createProduct] = useCreateProductMutation()
+  const [uploadProductImages, { isLoading: isUploading }] = useUploadProductImagesMutation()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   
   // Fragrance notes (only for perfumes)
   const [topNotes, setTopNotes] = useState<string[]>([])
@@ -162,10 +170,32 @@ export default function AddProductPage() {
     }
   }
 
-  const addImage = () => {
-    // In a real app, this would open a file picker
-    const newImage = `https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop&random=${Date.now()}`
-    setImages([...images, newImage])
+  // open native file chooser for image upload
+  const handleChooseImages = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const formData = new FormData()
+    Array.from(files).forEach((file) => formData.append("images", file))
+
+    try {
+      const res = await uploadProductImages(formData).unwrap()
+      const urls = res?.data?.urls || []
+      const absoluteUrls = urls.map((u: string) => (u.startsWith('http://') || u.startsWith('https://') ? u : `${SERVER_BASE_URL}${u}`))
+      if (absoluteUrls.length > 0) {
+        setImages((prev) => [...prev, ...absoluteUrls])
+        toast({ title: "Images uploaded", description: `${absoluteUrls.length} image(s) added.` })
+      }
+    } catch (err) {
+      toast({ title: "Image upload failed", description: "Please ensure files are valid images under 5MB and try again." })
+    } finally {
+      // reset input so selecting the same files again will trigger change
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
   }
 
   const removeImage = (index: number) => {
@@ -175,34 +205,50 @@ export default function AddProductPage() {
   const onSubmit = async (data: ProductForm) => {
     setIsLoading(true)
     try {
-      // In a real app, this would be an API call
-      const newProduct = {
-        ...data,
-        id: Date.now().toString(),
-        type: selectedProductType,
-        images: images.length > 0 ? images : ["/placeholder.svg?height=300&width=300&text=" + encodeURIComponent(data.name)],
-        rating: 0,
-        reviews: 0,
-        ...(selectedProductType === 'perfumes' && {
-          topNotes,
-          middleNotes,
-          baseNotes,
-        }),
+      if (selectedProductType !== 'perfume') {
+        toast({
+          title: "Unsupported product type",
+          description: "Currently, only Perfume products can be created.",
+        })
+        return
       }
 
-      console.log("New product:", newProduct)
+      if (images.length === 0) {
+        toast({ title: "Images required", description: "Please upload at least one product image before submitting." })
+        return
+      }
+
+      const payload = {
+        name: data.name,
+        brand: data.brand,
+        price: data.price,
+        originalPrice: data.originalPrice,
+        category: data.category,
+        description: data.description,
+        stockCount: data.stockCount,
+        inStock: data.inStock,
+        size: (data as any).size,
+        concentration: (data as any).concentration,
+        gender: (data as any).gender,
+        topNotes,
+        middleNotes,
+        baseNotes,
+        images: images,
+        image: images[0],
+      }
+
+      await createProduct(payload).unwrap()
 
       toast({
         title: "Product added successfully!",
         description: `${data.name} has been added to your inventory.`,
       })
 
-      router.push("/admin/products")
+      router.push("/admin/inventory")
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to add product. Please try again.",
-        // variant: "destructive",
+        description: "Failed to add product. Please check required fields and try again.",
       })
     } finally {
       setIsLoading(false)
@@ -221,7 +267,7 @@ export default function AddProductPage() {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-4 mb-6">
-            <Link href="/admin/products">
+            <Link href="/admin/inventory">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -446,7 +492,7 @@ export default function AddProductPage() {
               )}
 
               {/* Fragrance Notes - Only for perfumes */}
-              {selectedProductType === 'perfumes' && (
+              {selectedProductType === 'perfume' && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -525,9 +571,17 @@ export default function AddProductPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <Button type="button" variant="outline" onClick={addImage}>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleFilesSelected}
+                        className="hidden"
+                      />
+                      <Button type="button" variant="outline" onClick={handleChooseImages} disabled={isUploading}>
                         <Upload className="h-4 w-4 mr-2" />
-                        Add Image
+                        {isUploading ? "Uploading..." : "Upload Images"}
                       </Button>
                       
                       {images.length > 0 && (
@@ -604,7 +658,7 @@ export default function AddProductPage() {
                 <Button type="submit" disabled={isLoading} className="flex-1">
                   {isLoading ? "Adding Product..." : "Add Product"}
                 </Button>
-                <Link href="/admin/products">
+                <Link href="/admin/inventory">
                   <Button type="button" variant="outline">
                     Cancel
                   </Button>
