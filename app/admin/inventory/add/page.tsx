@@ -22,6 +22,7 @@ import Link from "next/link"
 import { productTypes, getCategoriesByProductType, getFieldsByProductType } from "@/lib/categories-data"
 import { useCreateProductMutation } from "@/store/api/productsApi"
 import { useUploadProductImagesMutation } from "@/store/api/productsApi"
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 
 // Base product schema
 const baseProductSchema = z.object({
@@ -96,6 +97,9 @@ export default function AddProductPage() {
   const [baseNotes, setBaseNotes] = useState<string[]>([])
   const [newNote, setNewNote] = useState("")
   const [noteType, setNoteType] = useState<"top" | "middle" | "base">("top")
+
+
+  const { data: categoriesData } = useGetCategoriesQuery()
 
   const {
     register,
@@ -389,6 +393,7 @@ export default function AddProductPage() {
                         placeholder="Describe the product, its features, and appeal..."
                         rows={4}
                         {...register("description")}
+                        className="outline-none"
                       />
                       {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
                     </div>

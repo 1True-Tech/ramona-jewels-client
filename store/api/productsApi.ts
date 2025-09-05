@@ -3,7 +3,6 @@ import type { RootState } from '../index'
 import { CreateProductRequest, Product, ProductQueryParams, ProductResponse, ProductsResponse, UpdateProductRequest } from '../apiTypes'
 
 
-
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL + '/perfumes',
   prepareHeaders: (headers, { getState }) => {
