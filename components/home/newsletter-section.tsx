@@ -26,6 +26,7 @@ export function NewsletterSection() {
     toast({
       title: "Successfully subscribed!",
       description: "Thank you for subscribing to our newsletter.",
+      variant: "success",
     })
 
     setEmail("")

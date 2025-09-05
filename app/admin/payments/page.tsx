@@ -22,7 +22,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 // Mock payment data

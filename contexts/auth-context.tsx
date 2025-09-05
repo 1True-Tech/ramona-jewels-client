@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for stored auth token and validate
-    const token = localStorage.getItem("auth-token")
+    const token = localStorage.getItem("token")
     if (token) {
       // In a real app, validate token with backend
       const mockUser = {
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: "admin" as const,
         }
         setUser(adminUser)
-        localStorage.setItem("auth-token", "mock-admin-token")
+        localStorage.setItem("token", "mock-admin-token")
       } else if (email === "user@example.com" && password === "user123") {
         const regularUser = {
           id: "2",
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: "user" as const,
         }
         setUser(regularUser)
-        localStorage.setItem("auth-token", "mock-user-token")
+        localStorage.setItem("token", "mock-user-token")
       } else {
         throw new Error("Invalid credentials")
       }
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: "user" as const,
       }
       setUser(newUser)
-      localStorage.setItem("auth-token", "mock-token")
+      localStorage.setItem("token", "mock-token")
     } catch (error) {
       throw error
     } finally {
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem("auth-token")
+    localStorage.removeItem("token")
     router.push("/")
   }
 

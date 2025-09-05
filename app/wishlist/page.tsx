@@ -26,6 +26,7 @@ export default function WishlistPage() {
     toast({
       title: "Added to cart",
       description: `${item.name} has been added to your cart.`,
+      variant: "success",
     })
   }
 
@@ -34,6 +35,7 @@ export default function WishlistPage() {
     toast({
       title: "Removed from wishlist",
       description: `${name} has been removed from your wishlist.`,
+      variant: "info",
     })
   }
 

@@ -30,7 +30,7 @@ import {
   Shield
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
@@ -129,7 +129,7 @@ export default function CheckoutPage() {
       toast({
         title: "Missing Information",
         description: "Please fill in all required shipping fields.",
-        // variant: "destructive"
+        variant: "destructive"
       })
       return
     }
@@ -143,7 +143,7 @@ export default function CheckoutPage() {
       toast({
         title: "Missing Payment Information",
         description: "Please fill in all payment details.",
-        // variant: "destructive"
+        variant: "destructive"
       })
       return
     }
@@ -187,6 +187,7 @@ export default function CheckoutPage() {
       toast({
         title: "Order Placed Successfully!",
         description: `Your order ${order.id} has been confirmed.`,
+        variant: "success",
       })
       
       // Redirect to order confirmation
@@ -196,7 +197,7 @@ export default function CheckoutPage() {
       toast({
         title: "Payment Failed",
         description: "There was an error processing your payment. Please try again.",
-        // variant: "destructive"
+        variant: "destructive"
       })
     } finally {
       setIsLoading(false)

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Eye, EyeOff, Store, Mail, Lock, User } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 const registerSchema = z.object({
@@ -50,13 +50,14 @@ export default function RegisterPage() {
       toast({
         title: "Welcome to Ramona Jewels!",
         description: "Your account has been created successfully.",
+        variant: "success",
       })
       router.push("/")
     } catch (error) {
       toast({
         title: "Registration failed",
         description: "Please try again with different credentials.",
-        // variant: "destructive",
+        variant: "destructive",
       })
     } finally {
       setIsLoading(false)

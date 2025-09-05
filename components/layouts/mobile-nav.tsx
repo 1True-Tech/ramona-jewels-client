@@ -5,8 +5,8 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Home, ShoppingCart, User, Gem, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { useCart } from "@/contexts/cart-context"
-import { useAuth } from "@/contexts/auth-context"
 
 export function MobileNav() {
   const pathname = usePathname()

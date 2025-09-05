@@ -8,7 +8,7 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { StatsCard } from "@/components/admin/stats-card"
 import { RecentOrders } from "@/components/admin/recent-orders"
 import { SalesChart } from "@/components/admin/sales-chart"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 
 const stats = [
   {
