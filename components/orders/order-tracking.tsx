@@ -272,7 +272,7 @@ export function OrderTracking({ orderId, className = '' }: OrderTrackingProps) {
                     </div>
                   </motion.div>
                 ))
-              )}
+              }
             </AnimatePresence>
           </div>
         </div>
