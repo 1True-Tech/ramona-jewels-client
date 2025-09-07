@@ -13,8 +13,8 @@ import { useGetSalesDataQuery } from "@/store/api/analyticsApi"
 
 export function SalesChart() {
   // Fetch monthly aggregated sales data for better year view
-  const { data, isLoading } = useGetSalesDataQuery({ period: 'monthly' })
-  const salesData = data?.data ?? []
+  const { data } = useGetSalesDataQuery({ period: 'monthly' })
+  const salesData = useMemo(() => data?.data ?? [], [data])
 
   // Derive available years from returned dates
   const years = useMemo(() => {
@@ -49,35 +49,31 @@ export function SalesChart() {
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
-          className="bg-amber-400 text-white px-2 py-1 rounded"
         >
-          {years.map((year) => (
-            <option key={year} value={year}>{year}</option>
+          {years.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
           ))}
         </select>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={filteredData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} />
-          <Tooltip formatter={(value: any, name: string) => [value, name === 'revenue' ? 'Revenue' : 'Orders']} />
-          <defs>
-            <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#FFcB00" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#FFcB00" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Area
-            type="monotone"
-            dataKey="revenue"
-            stroke="#FFcB00"
-            fillOpacity={1}
-            fill="url(#salesGradient)"
-            strokeWidth={2}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={filteredData} margin={{ left: 12, right: 12 }}>
+            <defs>
+              <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+            <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+            <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#fillRevenue)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   )
 }

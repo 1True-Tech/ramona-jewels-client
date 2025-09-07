@@ -42,6 +42,8 @@ interface TopUser {
   email: string
   totalSpent: number
   orders: number
+  avatar: string
+  status: 'active' | 'inactive'
 }
 
 interface TopUsersResponse {

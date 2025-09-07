@@ -8,13 +8,12 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Gem, Sparkles } from "lucide-react"
 import { jewelryCategories, perfumeCategories } from "@/lib/product-data"
-import { useAuth } from "@/contexts/redux-auth-context"
 
 interface ProductFiltersProps {
   selectedCategory: string
   onCategoryChange: (category: string) => void
   selectedType: "all" | "jewelry" | "perfume"
-  onTypeChange: (type: "all" | "jewelry" | "perfume") => void
+- onTypeChange: (type: "all" | "jewelry" | "perfume") => void
   priceRange: number[]
   onPriceRangeChange: (range: number[]) => void
 }
