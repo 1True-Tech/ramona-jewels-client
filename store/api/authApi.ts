@@ -38,7 +38,7 @@ const baseQuery = fetchBaseQuery({
   },
 })
 
-// Enhanced base query with automatic token refresh
+// Enhanced base query with automatic token refresh and modal integration
 const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   let result = await baseQuery(args, api, extraOptions)
   
@@ -55,17 +55,38 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
     
     if (refreshResult.data) {
       const refreshData = refreshResult.data as RefreshTokenResponse
-      // Store the new token
-      api.dispatch(refreshToken({ 
-        token: refreshData.token, 
-        expiresIn: refreshData.expiresIn 
-      }))
-      
-      // Retry the original query with new token
-      result = await baseQuery(args, api, extraOptions)
+      if (refreshData.success && refreshData.token) {
+        // Store the new token
+        api.dispatch(refreshToken({ token: refreshData.token }))
+        // Retry the original query with new token
+        result = await baseQuery(args, api, extraOptions)
+      } else {
+        // Refresh failed, logout user
+        api.dispatch(logout())
+      }
     } else {
       // Refresh failed, logout user
       api.dispatch(logout())
+    }
+  }
+  
+  // Handle backend response messages via global modal (except for auth endpoints)
+  const isAuthEndpoint = typeof args === 'string' ? 
+    ['/login', '/register', '/logout', '/me', '/refresh'].some(endpoint => args.includes(endpoint)) :
+    ['/login', '/register', '/logout', '/me', '/refresh'].some(endpoint => args?.url?.includes(endpoint))
+  
+  if (!isAuthEndpoint) {
+    if (result?.error) {
+      const err = result.error as any
+      const message = err?.data?.message || err?.data?.error || 'Request failed'
+      const errors = err?.data?.errors
+      const { showModal } = await import('../slices/uiSlice')
+      api.dispatch(showModal({ type: 'error', title: 'Request Error', message, errors }))
+    } else if (result?.data && (result.data as any).success === true && (args as any)?.method && (args as any)?.method !== 'GET') {
+      // For non-GET successful mutations, show success modal with optional message
+      const { showModal } = await import('../slices/uiSlice')
+      const message = ((result.data as any).message) || 'Operation completed successfully'
+      api.dispatch(showModal({ type: 'success', title: 'Success', message }))
     }
   }
   

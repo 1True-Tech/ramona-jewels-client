@@ -7,10 +7,13 @@ import { productsApi } from './api/productsApi'
 import { adminApi } from './api/adminApi'
 import { ordersApi } from './api/ordersApi'
 import { analyticsApi } from './api/analyticsApi'
+import { productTypesApi } from './api/productTypesApi'
+import uiReducer from './slices/uiSlice'
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    ui: uiReducer,
     [authApi.reducerPath]: authApi.reducer,
     [usersApi.reducerPath]: usersApi.reducer,
     [categoriesApi.reducerPath]: categoriesApi.reducer,
@@ -18,6 +21,7 @@ export const store = configureStore({
     [adminApi.reducerPath]: adminApi.reducer,
     [ordersApi.reducerPath]: ordersApi.reducer,
     [analyticsApi.reducerPath]: analyticsApi.reducer,
+    [productTypesApi.reducerPath]: productTypesApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -31,7 +35,8 @@ export const store = configureStore({
       productsApi.middleware,
       adminApi.middleware,
       ordersApi.middleware,
-      analyticsApi.middleware
+      analyticsApi.middleware,
+      productTypesApi.middleware
     ),
 })
 

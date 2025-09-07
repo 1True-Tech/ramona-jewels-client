@@ -26,14 +26,43 @@ export default function AdminAnalyticsPage() {
   const router = useRouter()
   const [dateRange, setDateRange] = useState({ period: 'month' as const })
 
-  // API queries
+  // API queries with debugging
   const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useGetAnalyticsDashboardQuery(dateRange)
-  const { data: revenueData, isLoading: revenueLoading } = useGetRevenueMetricsQuery(dateRange)
-  const { data: productData, isLoading: productLoading } = useGetProductPerformanceQuery(dateRange)
-  const { data: customerData, isLoading: customerLoading } = useGetCustomerInsightsQuery(dateRange)
+  const { data: revenueData, isLoading: revenueLoading, error: revenueError } = useGetRevenueMetricsQuery(dateRange)
+  const { data: productData, isLoading: productLoading, error: productError } = useGetProductPerformanceQuery(dateRange)
+  const { data: customerData, isLoading: customerLoading, error: customerError } = useGetCustomerInsightsQuery(dateRange)
+
+
+
+  // Check for any errors
+  const hasError = dashboardError || revenueError || productError || customerError
+  
+  // Extract error message properly
+  const getErrorMessage = (error: any) => {
+    if (!error) return null
+    return error?.data?.message || error?.message || error?.error || 'Unknown error'
+  }
+  
+  const errorMessage = getErrorMessage(dashboardError) || 
+                      getErrorMessage(revenueError) || 
+                      getErrorMessage(productError) || 
+                      getErrorMessage(customerError) || 
+                      'Failed to load analytics data'
+  
+  // Log errors for debugging
+  useEffect(() => {
+    if (hasError) {
+      console.log('Analytics Errors:', {
+        dashboard: dashboardError,
+        revenue: revenueError,
+        product: productError,
+        customer: customerError
+      })
+    }
+  }, [hasError, dashboardError, revenueError, productError, customerError])
 
   useEffect(() => {
-    if (!user || user.role !== "admin") {
+    if (user && user.role !== "admin") {
       router.push("/auth/login")
     }
   }, [user, router])
@@ -50,80 +79,90 @@ export default function AdminAnalyticsPage() {
     )
   }
 
-  if (dashboardError) {
-    return (
-      <AdminLayout>
-        <div className="text-center text-red-600 p-8">
-          Error loading analytics data. Please try again.
-        </div>
-      </AdminLayout>
-    )
+  // Handle API errors gracefully with fallback data
+
+  // Fallback data when API fails
+  const mockDashboard = {
+    revenue: {
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      yearlyRevenue: 0,
+      revenueGrowth: 0,
+      averageOrderValue: 0,
+      totalOrders: 0,
+      conversionRate: 0
+    },
+    customers: {
+      totalCustomers: 0,
+      newCustomers: 0,
+      returningCustomers: 0,
+      averageOrderValue: 0,
+      customerLifetimeValue: 0,
+      topCustomers: []
+    }
   }
 
-  const revenue = revenueData?.data
+  const revenue = revenueData?.data || (hasError ? mockDashboard.revenue : undefined)
   const products = productData?.data || []
-  const customers = customerData?.data
-  const dashboard = dashboardData?.data
+  const customers = customerData?.data || (hasError ? mockDashboard.customers : undefined)
+  const dashboard = dashboardData?.data || (hasError ? mockDashboard : undefined)
+
+  const topProducts = products.slice(0, 4)
 
   const stats = [
     {
       title: "Total Revenue",
       value: `$${revenue?.totalRevenue?.toLocaleString() || '0'}`,
-      change: `+${revenue?.revenueGrowth?.toFixed(1) || '0'}%`,
-      trend: "up" as const,
+      change: revenue?.revenueGrowth !== undefined ? `${revenue.revenueGrowth >= 0 ? '+' : ''}${revenue.revenueGrowth.toFixed(1)}%` : '+0.0%',
+      trend: (revenue?.revenueGrowth !== undefined && revenue.revenueGrowth >= 0 ? "up" : "down") as "up" | "down",
       icon: DollarSign,
     },
     {
       title: "Total Orders",
       value: revenue?.totalOrders?.toLocaleString() || '0',
-      change: "+8.2%",
-      trend: "up" as const,
-      icon: Package,
+      change: "+0.0%", // Static fallback since orderGrowth doesn't exist in RevenueMetrics
+      trend: "up" as "up" | "down",
+      icon: ShoppingCart,
     },
     {
-      title: "Active Customers",
+      title: "Total Customers",
       value: customers?.totalCustomers?.toLocaleString() || '0',
-      change: "+23.1%",
-      trend: "up" as const,
+      change: "+0.0%", // Static fallback since customerGrowth doesn't exist in CustomerInsights
+      trend: "up" as "up" | "down",
       icon: Users,
     },
     {
       title: "Conversion Rate",
-      value: `${revenue?.conversionRate?.toFixed(2) || '0'}%`,
-      change: "+0.4%",
-      trend: "up" as const,
+      value: `${revenue?.conversionRate?.toFixed(1) || '0'}%`,
+      change: "+0.0%", // Static fallback since conversionGrowth doesn't exist in RevenueMetrics
+      trend: "up" as "up" | "down",
       icon: TrendingUp,
     },
   ]
 
-  const topProducts = products.slice(0, 4)
   const productStats = [
     {
-      title: "Most Viewed",
-      value: topProducts[0]?.name || "N/A",
-      change: `${topProducts[0]?.views || 0} views`,
-      trend: "up" as const,
+      title: "Total Products",
+      value: products.length.toString(),
+      change: "+0.0%", // Static fallback since productGrowth doesn't exist in AnalyticsDashboard
+      icon: Package,
+    },
+    {
+      title: "Product Views",
+      value: "0", // Static fallback since totalViews doesn't exist in AnalyticsDashboard
+      change: "+0.0%",
       icon: Eye,
     },
     {
-      title: "Best Seller",
-      value: topProducts[0]?.name || "N/A",
-      change: `${topProducts[0]?.sales || 0} sold`,
-      trend: "up" as const,
-      icon: ShoppingCart,
+      title: "Wishlist Adds",
+      value: "0", // Static fallback since wishlistAdds doesn't exist in AnalyticsDashboard
+      change: "+0.0%",
+      icon: Heart,
     },
     {
-      title: "Top Revenue",
-      value: topProducts[0]?.name || "N/A",
-      change: `$${topProducts[0]?.revenue?.toLocaleString() || '0'}`,
-      trend: "up" as const,
-      icon: DollarSign,
-    },
-    {
-      title: "Best Conversion",
-      value: topProducts[0]?.name || "N/A",
-      change: `${topProducts[0]?.conversionRate?.toFixed(1) || '0'}%`,
-      trend: "up" as const,
+      title: "Avg Rating",
+      value: "0.0", // Static fallback since averageRating doesn't exist in AnalyticsDashboard
+      change: "+0.0",
       icon: Star,
     },
   ]
@@ -131,6 +170,34 @@ export default function AdminAnalyticsPage() {
   return (
     <AdminLayout>
       <div className="space-y-8">
+        {hasError && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Limited Data Available
+                </h3>
+                <div className="mt-2 text-sm text-yellow-700">
+                  <p>Some analytics data couldn't be loaded. {errorMessage}</p>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-yellow-100 px-2 py-1.5 rounded-md text-sm font-medium text-yellow-800 hover:bg-yellow-200"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold gradient-text">Analytics Dashboard</h1>
@@ -188,22 +255,22 @@ export default function AdminAnalyticsPage() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
-            <SalesChart data={dashboard?.sales} />
+            <SalesChart />
           </motion.div>
 
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
-            <CategoryChart data={dashboard?.categories} />
+            <CategoryChart />
           </motion.div>
         </div>
 
         {/* Detailed Analytics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-            <ProductAnalytics data={products} />
+            <ProductAnalytics />
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-            <TopProducts data={topProducts} />
+            <TopProducts />
           </motion.div>
         </div>
       </div>

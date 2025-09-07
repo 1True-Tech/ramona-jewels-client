@@ -3,38 +3,52 @@ import type { RootState } from '../index'
 
 interface SalesData {
   date: string
-  sales: number
-  orders: number
   revenue: number
+  orders: number
+  averageOrderValue: number
 }
 
 interface ProductPerformance {
   id: string
   name: string
   category: string
-  sales: number
-  revenue: number
-  views: number
-  conversionRate: number
-  image: string
+  // Backend fields
+  totalSold: number
+  totalRevenue: number
+  averagePrice: number
+  currentStock: number
+  image: string | null
+  // Optional legacy fields for compatibility (not returned by backend)
+  sales?: number
+  revenue?: number
+  views?: number
+  conversionRate?: number
 }
 
 interface CategoryPerformance {
-  id: string
-  name: string
-  sales: number
-  revenue: number
-  products: number
-  averagePrice: number
+  category: string
+  totalSold: number
+  totalRevenue: number
+  productCount: number
 }
 
 interface CustomerInsights {
   totalCustomers: number
   newCustomers: number
-  returningCustomers: number
-  averageOrderValue: number
-  customerLifetimeValue: number
-  topCustomers: {
+  // Detailed insights from backend
+  averageLifetimeValue: number
+  averageOrdersPerCustomer: number
+  repeatCustomerRate: number
+  customerSegments: {
+    high: number
+    medium: number
+    low: number
+  }
+  // Optional legacy fields for compatibility
+  returningCustomers?: number
+  averageOrderValue?: number
+  customerLifetimeValue?: number
+  topCustomers?: {
     id: string
     name: string
     email: string
@@ -43,14 +57,20 @@ interface CustomerInsights {
   }[]
 }
 
+// Summary metrics used on dashboard
 interface RevenueMetrics {
   totalRevenue: number
-  monthlyRevenue: number
-  yearlyRevenue: number
-  revenueGrowth: number
-  averageOrderValue: number
   totalOrders: number
-  conversionRate: number
+  averageOrderValue: number
+  // Optional fields that may be present on dashboard only
+  revenueGrowth?: number
+  conversionRate?: number
+  monthlyRevenue?: number | { month: string; revenue: number }[]
+  yearlyRevenue?: number
+  revenueByPaymentMethod?: { _id: string; revenue: number; orders: number }[]
+  totalShipping?: number
+  totalTax?: number
+  totalDiscount?: number
 }
 
 interface InventoryInsights {
@@ -87,7 +107,7 @@ interface AnalyticsResponse {
 interface DateRangeParams {
   startDate?: string
   endDate?: string
-  period?: 'day' | 'week' | 'month' | 'year'
+  period?: 'day' | 'week' | 'month' | 'year' | 'daily' | 'weekly' | 'monthly' | 'hourly'
 }
 
 const baseQuery = fetchBaseQuery({
@@ -101,21 +121,40 @@ const baseQuery = fetchBaseQuery({
   },
 })
 
+// Wrap baseQuery to handle backend response messages via global modal
+const baseQueryWithModal: typeof baseQuery = async (args: any, api: any, extra: any) => {
+  const result: any = await baseQuery(args, api, extra)
+  // If backend returns success:false or error structure, surface it via modal
+  if (result?.error) {
+    const err = result.error as any
+    const message = err?.data?.message || err?.data?.error || 'Request failed'
+    const errors = err?.data?.errors
+    const { showModal } = await import('../slices/uiSlice')
+    api.dispatch(showModal({ type: 'error', title: 'Request Error', message, errors }))
+  } else if (result?.data && result.data.success === true && (args as any)?.method && (args as any)?.method !== 'GET') {
+    // For non-GET successful mutations, show success modal with optional message
+    const { showModal } = await import('../slices/uiSlice')
+    const message = (result.data as any).message || 'Operation completed successfully'
+    api.dispatch(showModal({ type: 'success', title: 'Success', message }))
+  }
+  return result
+}
+
 export const analyticsApi = createApi({
   reducerPath: 'analyticsApi',
-  baseQuery,
+  baseQuery: baseQueryWithModal,
   tagTypes: ['Analytics', 'SalesData', 'ProductPerformance', 'CustomerInsights'],
   endpoints: (builder) => ({
     // Get complete analytics dashboard
     getAnalyticsDashboard: builder.query<AnalyticsResponse, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }
         })
-        return `analytics?${searchParams.toString()}`
+        return `analytics/dashboard?${searchParams.toString()}`
       },
       providesTags: ['Analytics'],
     }),
@@ -124,7 +163,7 @@ export const analyticsApi = createApi({
     getSalesData: builder.query<{ success: boolean; data: SalesData[] }, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }
@@ -138,7 +177,7 @@ export const analyticsApi = createApi({
     getRevenueMetrics: builder.query<{ success: boolean; data: RevenueMetrics }, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }
@@ -152,7 +191,7 @@ export const analyticsApi = createApi({
     getProductPerformance: builder.query<{ success: boolean; data: ProductPerformance[] }, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }
@@ -166,7 +205,7 @@ export const analyticsApi = createApi({
     getCategoryPerformance: builder.query<{ success: boolean; data: CategoryPerformance[] }, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }
@@ -180,7 +219,7 @@ export const analyticsApi = createApi({
     getCustomerInsights: builder.query<{ success: boolean; data: CustomerInsights }, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }
@@ -194,7 +233,7 @@ export const analyticsApi = createApi({
     getInventoryInsights: builder.query<{ success: boolean; data: InventoryInsights }, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }
@@ -208,7 +247,7 @@ export const analyticsApi = createApi({
     getTrafficData: builder.query<{ success: boolean; data: TrafficData[] }, DateRangeParams | void>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(params ?? {}).forEach(([key, value]) => {
           if (value !== undefined && value !== '') {
             searchParams.append(key, value.toString())
           }

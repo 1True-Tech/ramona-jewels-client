@@ -40,6 +40,7 @@ export interface AuthState {
   error: string | null
   lastActivity: number
   tokenExpiry: number | null
+  hydrated: boolean
 }
 
 const initialState: AuthState = {
@@ -50,6 +51,7 @@ const initialState: AuthState = {
   error: null,
   lastActivity: Date.now(),
   tokenExpiry: null,
+  hydrated: false,
 }
 
 const authSlice = createSlice({
@@ -126,6 +128,8 @@ const authSlice = createSlice({
           localStorage.removeItem('token-expiry')
         }
       }
+      // mark hydration complete regardless of outcome
+      state.hydrated = true
     },
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {

@@ -10,15 +10,18 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, TrendingUp, Gem, Sparkles, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/redux-auth-context"
-import { useToast } from "@/hooks/use-toast"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 import { useGetProductsQuery, useUpdateProductStockMutation, useDeleteProductMutation, useToggleProductStatusMutation } from "@/store/api/productsApi"
 import Image from "next/image"
 import Link from "next/link"
+import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 
 export default function AdminInventoryPage() {
-  const { user } = useAuth()
+  const { user, hydrated } = useAuth()
   const router = useRouter()
-  const { toast } = useToast()
+  const dispatch = useAppDispatch()
   
   // RTK Query hooks
   const { data: productsResponse, isLoading, error } = useGetProductsQuery()
@@ -26,10 +29,37 @@ export default function AdminInventoryPage() {
   const [updateProductStock] = useUpdateProductStockMutation()
   const [deleteProduct] = useDeleteProductMutation()
   const [toggleProductStatus] = useToggleProductStatusMutation()
+  const { data: productTypesRes } = useGetProductTypesQuery()
+  const productTypes = productTypesRes?.data ?? []
+  const { data: categoriesRes } = useGetCategoriesQuery()
+  const categories = categoriesRes?.data ?? []
   
+  // Build maps to derive product type from category when product.type is absent
+  const productTypesById = useMemo(() => {
+    const map = new Map<string, any>()
+    for (const pt of productTypes) map.set(pt._id, pt)
+    return map
+  }, [productTypes])
+
+  const categoryToProductTypeName = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories) {
+      const pt = productTypesById.get(c.productType)
+      if (pt?.name) map.set((c.name ?? '').toLowerCase(), pt.name)
+    }
+    return map
+  }, [categories, productTypesById])
+
+  const getTypeNameForProduct = (p: any): string | undefined => {
+    const direct = (p?.type ?? '').trim()
+    if (direct) return direct
+    const cat = (p?.category ?? '').toLowerCase()
+    return categoryToProductTypeName.get(cat)
+  }
+
   // Local state for filters
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedType, setSelectedType] = useState<"all" | "jewelry" | "perfume">("all")
+  const [selectedType, setSelectedType] = useState<string>("all")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all")
 
@@ -38,6 +68,12 @@ export default function AdminInventoryPage() {
       router.push("/auth/login")
     }
   }, [user, router])
+  useEffect(() => {
+    if (!hydrated) return
+    if (!user || user.role !== "admin") {
+      router.push("/auth/login")
+    }
+  }, [hydrated, user, router])
 
   // Memoized filtered products
   const filteredProducts = useMemo(() => {
@@ -55,7 +91,8 @@ export default function AdminInventoryPage() {
 
     // Filter by type
     if (selectedType !== "all") {
-      filtered = filtered.filter((product) => product.type === selectedType)
+      const st = selectedType.toLowerCase()
+      filtered = filtered.filter((product) => (getTypeNameForProduct(product) ?? "").toLowerCase() === st)
     }
 
     // Filter by category
@@ -71,53 +108,56 @@ export default function AdminInventoryPage() {
     }
 
     return filtered
-  }, [products, searchQuery, selectedType, selectedCategory, stockFilter])
+  }, [products, searchQuery, selectedType, selectedCategory, stockFilter, getTypeNameForProduct])
 
   const handleUpdateStock = async (productId: string, newStock: number) => {
     try {
       await updateProductStock({ id: productId, stock: newStock }).unwrap()
-      toast({
-        title: "Stock updated",
-        description: "Product stock has been updated successfully.",
-      })
+      dispatch(showModal({
+        type: 'success',
+        title: 'Stock updated',
+        message: 'Product stock has been updated successfully.'
+      }))
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update product stock.",
-        variant: "destructive",
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to update product stock.'
+      }))
     }
   }
 
   const handleDeleteProduct = async (productId: string, productName: string) => {
     try {
       await deleteProduct(productId).unwrap()
-      toast({
-        title: "Product deleted",
-        description: `${productName} has been removed from inventory.`,
-      })
+      dispatch(showModal({
+        type: 'success',
+        title: 'Product deleted',
+        message: `${productName} has been removed from inventory.`
+      }))
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete product.",
-        variant: "destructive",
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete product.'
+      }))
     }
   }
 
   const handleToggleStatus = async (productId: string, currentStatus: boolean) => {
     try {
       await toggleProductStatus({ id: productId, inStock: !currentStatus }).unwrap()
-      toast({
-        title: "Status updated",
-        description: `Product ${currentStatus ? 'deactivated' : 'activated'} successfully.`,
-      })
+      dispatch(showModal({
+        type: 'success',
+        title: 'Status updated',
+        message: `Product ${currentStatus ? 'deactivated' : 'activated'} successfully.`
+      }))
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update product status.",
-        variant: "destructive",
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to update product status.'
+      }))
     }
   }
 
@@ -249,18 +289,18 @@ export default function AdminInventoryPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Products</SelectItem>
-              <SelectItem value="jewelry">
-                <div className="flex items-center">
-                  <Gem className="h-4 w-4 mr-2" />
-                  Jewelry
-                </div>
-              </SelectItem>
-              <SelectItem value="perfume">
-                <div className="flex items-center">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Perfumes
-                </div>
-              </SelectItem>
+              {productTypes.map((t) => (
+                <SelectItem key={t._id} value={t.name}>
+                  <div className="flex items-center">
+                    {t.icon ? (
+                      <span className="mr-2">{t.icon}</span>
+                    ) : (
+                      <Package className="h-4 w-4 mr-2" />
+                    )}
+                    {t.name?.charAt(0).toUpperCase() + (t.name?.slice(1) ?? "")}
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -322,23 +362,28 @@ export default function AdminInventoryPage() {
                           </div>
                           <div>
                             <p className="font-medium whitespace-nowrap">{product.name}</p>
-                            <p className="text-sm text-muted-foreground">{product.brand || 'No brand'}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">{product.brand || 'No brand'}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <Badge variant="outline" className="border-primary/20">
-                          {product.type === "jewelry" ? (
-                            <>
-                              <Gem className="h-3 w-3 mr-1" />
-                              Jewelry
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              Perfume
-                            </>
-                          )}
+                          {(() => {
+                            const ptName = getTypeNameForProduct(product)
+                            const t = productTypes.find((pt) => (pt.name ?? '').toLowerCase() === (ptName ?? '').toLowerCase())
+                            const baseLabel = ptName && ptName.length > 0 ? ptName : (product.type ? product.type : "Unknown")
+                            const label = baseLabel.charAt(0).toUpperCase() + baseLabel.slice(1)
+                            return (
+                              <>
+                                {t?.icon ? (
+                                  <span className="mr-1">{t.icon}</span>
+                                ) : (
+                                  <Package className="h-3 w-3 mr-1" />
+                                )}
+                                {label}
+                              </>
+                            )
+                          })()}
                         </Badge>
                       </td>
                       <td className="py-4 px-4 text-sm capitalize">{product.category || 'Uncategorized'}</td>

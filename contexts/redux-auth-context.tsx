@@ -19,13 +19,14 @@ interface AuthContextType {
   clearError: () => void
   refetch: () => void
   updateUser: (user: Partial<User>) => void
+  hydrated: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function ReduxAuthProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
-  const { user, isAuthenticated, isLoading, error, token } = useAppSelector((state) => state.auth)
+  const { user, isAuthenticated, isLoading, error, token, hydrated } = useAppSelector((state) => state.auth)
   
   const [loginMutation, { isLoading: loginLoading }] = useLoginMutation()
   const [registerMutation, { isLoading: registerLoading }] = useRegisterMutation()
@@ -99,6 +100,7 @@ export function ReduxAuthProvider({ children }: { children: ReactNode }) {
     clearError,
     refetch,
     updateUser,
+    hydrated,
   }
 
   return (

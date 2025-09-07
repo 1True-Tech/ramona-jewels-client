@@ -5,15 +5,46 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Filter, Grid, List, Gem, Sparkles } from "lucide-react"
-import { allProducts } from "@/lib/product-data"
+// import { allProducts } from "@/lib/product-data"
 import { Navbar } from "@/components/layouts/navbar"
 import { ProductSort } from "@/components/products/product-sort"
 import { ProductFilters } from "@/components/products/product-filters"
-import { Product, ProductCard } from "@/components/products/product-card"
+import { Product as UIProduct, ProductCard } from "@/components/products/product-card"
 import { MobileNav } from "@/components/layouts/mobile-nav"
+import { useGetProductsQuery } from "@/store/api/productsApi"
+import type { Product as ApiProduct } from "@/store/apiTypes"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
+  try {
+    return API_URL ? new URL(API_URL).origin : ""
+  } catch {
+    return ""
+  }
+})()
+const toImageUrl = (src?: string) => {
+  if (!src) return "/placeholder.svg"
+  if (/^https?:\/\//i.test(src)) return src
+  const path = src.startsWith("/") ? src : `/${src}`
+  return `${SERVER_URL}${path}`
+}
+
+const toUIProduct = (p: ApiProduct): UIProduct => ({
+  id: p._id,
+  name: p.name,
+  price: p.price,
+  originalPrice: p.originalPrice,
+  image: toImageUrl(p.images?.[0]),
+  rating: undefined,
+  reviews: undefined,
+  badge: undefined,
+  type: (p.type === "perfume" || p.type === "jewelry") ? (p.type as "perfume" | "jewelry") : undefined,
+})
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState(allProducts)
+  const { data, isLoading, error } = useGetProductsQuery()
+  const [baseProducts, setBaseProducts] = useState<ApiProduct[]>([])
+  const [products, setProducts] = useState<ApiProduct[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [selectedType, setSelectedType] = useState<"all" | "jewelry" | "perfume">("all")
@@ -23,32 +54,35 @@ export default function ProductsPage() {
   const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
-    let filtered = allProducts
+    if (data?.data) {
+      setBaseProducts(data.data)
+      setProducts(data.data)
+    }
+  }, [data])
 
-    // Filter by search query
+  useEffect(() => {
+    let filtered: ApiProduct[] = [...baseProducts]
+
     if (searchQuery) {
+      const q = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (product) =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchQuery.toLowerCase()),
+          product.name.toLowerCase().includes(q) ||
+          (product.brand?.toLowerCase()?.includes(q) ?? false) ||
+          (product.category?.toLowerCase()?.includes(q) ?? false),
       )
     }
 
-    // Filter by type
     if (selectedType !== "all") {
-      filtered = filtered.filter((product) => product.type === selectedType)
+      filtered = filtered.filter((product) => (product.type || "").toLowerCase() === selectedType)
     }
 
-    // Filter by category
     if (selectedCategory) {
-      filtered = filtered.filter((product) => product.category === selectedCategory)
+      filtered = filtered.filter((product) => (product.category || "") === selectedCategory)
     }
 
-    // Filter by price range
     filtered = filtered.filter((product) => product.price >= priceRange[0] && product.price <= priceRange[1])
 
-    // Sort products
     switch (sortBy) {
       case "price-low":
         filtered.sort((a, b) => a.price - b.price)
@@ -57,17 +91,16 @@ export default function ProductsPage() {
         filtered.sort((a, b) => b.price - a.price)
         break
       case "rating":
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0))
         break
       case "newest":
-        filtered.sort((a, b) => b.id.localeCompare(a.id))
+        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         break
       default:
         break
     }
 
     setProducts(filtered)
-  }, [searchQuery, selectedCategory, selectedType, priceRange, sortBy])
+  }, [baseProducts, searchQuery, selectedCategory, selectedType, priceRange, sortBy])
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,6 +114,14 @@ export default function ProductsPage() {
             Discover our complete collection of luxury jewelry and premium fragrances
           </p>
         </motion.div>
+
+        {/* Loading and Error States */}
+        {isLoading && (
+          <div className="text-sm text-muted-foreground mb-4">Loading products...</div>
+        )}
+        {error && !isLoading && (
+          <div className="text-sm text-red-500 mb-4">Failed to load products.</div>
+        )}
 
         {/* Type Filter Tabs */}
         <motion.div
@@ -189,7 +230,7 @@ export default function ProductsPage() {
             />
           </div>
 
-          {/* Products Grid */}
+        {/* Products Grid */}
           <div className="flex-1">
             <div className="mb-4 text-sm text-muted-foreground">
               Showing {products.length}{" "}
@@ -202,18 +243,18 @@ export default function ProductsPage() {
             >
               {products.map((product, index) => (
                 <motion.div
-                  key={product.id}
+                  key={product._id}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
-                  <ProductCard product={product as Product} />
+                  <ProductCard product={toUIProduct(product)} />
                 </motion.div>
               ))}
             </motion.div>
 
-            {products.length === 0 && (
+            {products.length === 0 && !isLoading && (
               <div className="text-center py-12">
                 <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 flex items-center justify-center">
                   <Search className="h-8 w-8 text-primary" />

@@ -4,7 +4,7 @@ export interface Product {
     description: string
     price: number
     category: string
-    originalPrice: number
+    originalPrice?: number
     brand: string
     images: string[]
     stock: number
@@ -14,6 +14,14 @@ export interface Product {
     updatedAt: string
     // add optional type to support UI filters between jewelry/perfume
     type?: string
+    // optional perfume-specific fields from backend
+    size?: string
+    concentration?: string
+    gender?: string
+    image?: string
+    topNotes?: string[]
+    middleNotes?: string[]
+    baseNotes?: string[]
   }
   
   export interface ProductsResponse {
@@ -63,9 +71,22 @@ export interface Product {
     category?: string
     brand?: string
     images?: string[]
+    // Support both client and server conventions
     stock?: number
+    stockCount?: number
+    // Server expects inStock; keep isActive for legacy compatibility
+    inStock?: boolean
     isActive?: boolean
     specifications?: Record<string, any>
+    // Optional perfume-specific fields supported by backend
+    image?: string
+    originalPrice?: number
+    size?: string
+    concentration?: string
+    gender?: string
+    topNotes?: string[]
+    middleNotes?: string[]
+    baseNotes?: string[]
   }
   
   export interface ProductQueryParams {

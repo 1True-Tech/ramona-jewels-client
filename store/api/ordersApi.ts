@@ -2,8 +2,6 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { RootState } from '../index'
 import { Order, OrderQueryParams, OrdersResponse, OrderStatsResponse, UpdateOrderStatusRequest } from '../apiTypes'
 
-
-
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL + '/orders',
   prepareHeaders: (headers, { getState }) => {
@@ -15,9 +13,28 @@ const baseQuery = fetchBaseQuery({
   },
 })
 
+// Wrap baseQuery to handle backend response messages via global modal
+const baseQueryWithModal: typeof baseQuery = async (args: any, api: any, extra: any) => {
+  const result: any = await baseQuery(args, api, extra)
+  // If backend returns success:false or error structure, surface it via modal
+  if (result?.error) {
+    const err = result.error as any
+    const message = err?.data?.message || err?.data?.error || 'Request failed'
+    const errors = err?.data?.errors
+    const { showModal } = await import('../slices/uiSlice')
+    api.dispatch(showModal({ type: 'error', title: 'Request Error', message, errors }))
+  } else if (result?.data && result.data.success === true && (args as any)?.method && (args as any)?.method !== 'GET') {
+    // For non-GET successful mutations, show success modal with optional message
+    const { showModal } = await import('../slices/uiSlice')
+    const message = (result.data as any).message || 'Operation completed successfully'
+    api.dispatch(showModal({ type: 'success', title: 'Success', message }))
+  }
+  return result
+}
+
 export const ordersApi = createApi({
   reducerPath: 'ordersApi',
-  baseQuery,
+  baseQuery: baseQueryWithModal,
   tagTypes: ['Orders', 'Order', 'OrderStats'],
   endpoints: (builder) => ({
     // Get all orders with pagination and filtering

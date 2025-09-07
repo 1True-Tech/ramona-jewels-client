@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useWishlist } from "@/contexts/wishlist-context"
 import { useCart } from "@/contexts/cart-context"
-import { useToast } from "@/hooks/use-toast"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 
 export default function WishlistPage() {
   const { state: wishlistState, removeItem } = useWishlist()
   const { addItem } = useCart()
-  const { toast } = useToast()
+  const dispatch = useAppDispatch()
 
   const handleAddToCart = (item: any) => {
     addItem({
@@ -23,20 +24,20 @@ export default function WishlistPage() {
       image: item.image,
       // quantity: 1,
     })
-    toast({
-      title: "Added to cart",
-      description: `${item.name} has been added to your cart.`,
-      variant: "success",
-    })
+    dispatch(showModal({
+       type: 'success',
+       title: 'Added to cart',
+       message: `${item.name} has been added to your cart.`
+     }))
   }
 
   const handleRemoveFromWishlist = (id: string, name: string) => {
     removeItem(id)
-    toast({
-      title: "Removed from wishlist",
-      description: `${name} has been removed from your wishlist.`,
-      variant: "info",
-    })
+    dispatch(showModal({
+       type: 'success',
+       title: 'Removed from wishlist',
+       message: `${name} has been removed from your wishlist.`
+     }))
   }
 
   if (wishlistState.items.length === 0) {

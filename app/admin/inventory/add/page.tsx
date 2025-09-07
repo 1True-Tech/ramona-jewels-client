@@ -1,119 +1,62 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import Image from "next/image"
+import Link from "next/link"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Upload, Plus, X } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 import { useAuth } from "@/contexts/redux-auth-context"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
-import { productTypes, getCategoriesByProductType, getFieldsByProductType } from "@/lib/categories-data"
-import { useCreateProductMutation } from "@/store/api/productsApi"
-import { useUploadProductImagesMutation } from "@/store/api/productsApi"
+import { Upload, X, ArrowLeft, Save, Loader2 } from "lucide-react"
+import { useCreateProductMutation, useUploadProductImagesMutation } from "@/store/api/productsApi"
+import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
 import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
-
-// Base product schema
-const baseProductSchema = z.object({
-  name: z.string().min(1, "Product name is required"),
-  brand: z.string().min(1, "Brand is required"),
-  price: z.number().min(0.01, "Price must be greater than 0"),
-  originalPrice: z.number().optional(),
-  productType: z.string().min(1, "Product type is required"),
-  category: z.string().min(1, "Category is required"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  stockCount: z.number().min(0, "Stock count must be 0 or greater"),
-  inStock: z.boolean(),
-})
-
-// Ensure we construct absolute URLs for images from server responses
-const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || ''
-
-// Dynamic schema that will be extended based on product type
-const createProductSchema = (productType: string) => {
-  const fields = getFieldsByProductType(productType)
-  let schema = baseProductSchema
-
-  fields.forEach(field => {
-    if (field.required) {
-      if (field.type === 'number') {
-        // @ts-expect-error - schema shape is intentionally dynamic
-        schema = schema.extend({
-          [field.name]: z.number().min(0, `${field.label} is required`)
-        })
-      } else {
-        // @ts-expect-error - schema shape is intentionally dynamic
-        schema = schema.extend({
-          [field.name]: z.string().min(1, `${field.label} is required`)
-        })
-      }
-    } else {
-      if (field.type === 'number') {
-        // @ts-expect-error - schema shape is intentionally dynamic
-        schema = schema.extend({
-          [field.name]: z.number().optional()
-        })
-      } else {
-        // @ts-expect-error - schema shape is intentionally dynamic
-        schema = schema.extend({
-          [field.name]: z.string().optional()
-        })
-      }
-    }
-  })
-
-  return schema
-}
-
-type ProductForm = z.infer<ReturnType<typeof createProductSchema>>
+import { getFieldsByProductType, type ProductTypeField } from "@/lib/categories-data"
 
 export default function AddProductPage() {
-  const { user } = useAuth()
   const router = useRouter()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedProductType, setSelectedProductType] = useState<string>("")
-  const [availableCategories, setAvailableCategories] = useState<any[]>([])
-  const [productTypeFields, setProductTypeFields] = useState<any[]>([])
-  const [images, setImages] = useState<string[]>([])
-  const [createProduct] = useCreateProductMutation()
-  const [uploadProductImages, { isLoading: isUploading }] = useUploadProductImagesMutation()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  
-  // Fragrance notes (only for perfumes)
-  const [topNotes, setTopNotes] = useState<string[]>([])
-  const [middleNotes, setMiddleNotes] = useState<string[]>([])
-  const [baseNotes, setBaseNotes] = useState<string[]>([])
-  const [newNote, setNewNote] = useState("")
-  const [noteType, setNoteType] = useState<"top" | "middle" | "base">("top")
+  const { user } = useAuth()
+  const dispatch = useAppDispatch()
 
+  const [name, setName] = useState("")
+  const [brand, setBrand] = useState("")
+  const [description, setDescription] = useState("")
+  const [price, setPrice] = useState<number | "">("")  
+  const [originalPrice, setOriginalPrice] = useState<number | "">("")  
+  const [stockCount, setStockCount] = useState<number | "">("")  
+  const [inStock, setInStock] = useState(true)
+  // Rating, reviews, and badge will be managed by the backend
 
-  const { data: categoriesData } = useGetCategoriesQuery()
+  const [selectedTypeId, setSelectedTypeId] = useState<string>("")
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("")
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-    reset,
-  } = useForm<ProductForm>({
-    resolver: zodResolver(selectedProductType ? createProductSchema(selectedProductType) : baseProductSchema),
-    defaultValues: {
-      inStock: true,
-    },
-  })
+  // Dynamic field state bag
+  const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({})
+
+  // Images state
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imageUrls, setImageUrls] = useState<string[]>([])
+
+  // API hooks
+  const { data: typesResp } = useGetProductTypesQuery()
+  const types = typesResp?.data ?? []
+
+  const { data: categoriesResp } = useGetCategoriesQuery(
+    selectedTypeId ? { productType: selectedTypeId } : undefined
+  )
+  const categories = categoriesResp?.data ?? []
+
+  const [createProduct, { isLoading: isCreating }] = useCreateProductMutation()
+  const [uploadImages, { isLoading: isUploading }] = useUploadProductImagesMutation()
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -121,557 +64,349 @@ export default function AddProductPage() {
     }
   }, [user, router])
 
-  // Update categories when product type changes
+  // Reset dependent selections when type changes
   useEffect(() => {
-    if (selectedProductType) {
-      const categories = getCategoriesByProductType(selectedProductType)
-      const fields = getFieldsByProductType(selectedProductType)
-      setAvailableCategories(categories)
-      setProductTypeFields(fields)
-      
-      // Reset category when product type changes
-      setValue("category", "")
-      
-      // Reset form with new schema
-      reset({
-        inStock: true,
-        productType: selectedProductType
-      })
-    } else {
-      setAvailableCategories([])
-      setProductTypeFields([])
+    setSelectedCategoryId("")
+    setDynamicValues({})
+  }, [selectedTypeId])
+
+  const typeKey = useMemo(() => {
+    if (!selectedTypeId) return ""
+    const t = types.find((t: any) => t._id === selectedTypeId)
+    return t?.name?.toLowerCase?.() || ""
+  }, [selectedTypeId, types])
+
+  const fields: ProductTypeField[] = useMemo(() => (typeKey ? getFieldsByProductType(typeKey) : []), [typeKey])
+
+  const onPickImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : []
+    if (!files.length) return
+    setImageFiles((prev) => [...prev, ...files])
+    // optimistic local previews
+    const newUrls = files.map((f) => URL.createObjectURL(f))
+    setImageUrls((prev) => [...prev, ...newUrls])
+  }
+
+  const removeImageAt = (idx: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== idx))
+    setImageUrls((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleDynamicChange = (name: string, value: any) => {
+    setDynamicValues((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      dispatch(showModal({ type: 'error', title: 'Validation Error', message: 'Name is required' }))
+      return
     }
-  }, [selectedProductType, setValue, reset])
-
-  const addNote = () => {
-    if (!newNote.trim()) return
-
-    switch (noteType) {
-      case "top":
-        setTopNotes([...topNotes, newNote.trim()])
-        break
-      case "middle":
-        setMiddleNotes([...middleNotes, newNote.trim()])
-        break
-      case "base":
-        setBaseNotes([...baseNotes, newNote.trim()])
-        break
+    if (!description.trim()) {
+      dispatch(showModal({ type: 'error', title: 'Validation Error', message: 'Please add a description' }))
+      return
     }
-    setNewNote("")
-  }
-
-  const removeNote = (note: string, type: "top" | "middle" | "base") => {
-    switch (type) {
-      case "top":
-        setTopNotes(topNotes.filter((n) => n !== note))
-        break
-      case "middle":
-        setMiddleNotes(middleNotes.filter((n) => n !== note))
-        break
-      case "base":
-        setBaseNotes(baseNotes.filter((n) => n !== note))
-        break
+    if (!selectedTypeId) {
+      dispatch(showModal({ type: 'error', title: 'Validation Error', message: 'Please select a product type' }))
+      return
     }
-  }
-
-  // open native file chooser for image upload
-  const handleChooseImages = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    const formData = new FormData()
-    Array.from(files).forEach((file) => formData.append("images", file))
-
-    try {
-      const res = await uploadProductImages(formData).unwrap()
-      const urls = res?.data?.urls || []
-      const absoluteUrls = urls.map((u: string) => (u.startsWith('http://') || u.startsWith('https://') ? u : `${SERVER_BASE_URL}${u}`))
-      if (absoluteUrls.length > 0) {
-        setImages((prev) => [...prev, ...absoluteUrls])
-        toast({ title: "Images uploaded", description: `${absoluteUrls.length} image(s) added.` })
-      }
-    } catch (err) {
-      toast({ title: "Image upload failed", description: "Please ensure files are valid images under 5MB and try again." })
-    } finally {
-      // reset input so selecting the same files again will trigger change
-      if (fileInputRef.current) fileInputRef.current.value = ""
+    if (!selectedCategoryId) {
+      dispatch(showModal({ type: 'error', title: 'Validation Error', message: 'Please select a category' }))
+      return
     }
-  }
-
-  const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index))
-  }
-
-  const onSubmit = async (data: ProductForm) => {
-    setIsLoading(true)
-    try {
-      if (selectedProductType !== 'perfume') {
-        toast({
-          title: "Unsupported product type",
-          description: "Currently, only Perfume products can be created.",
-        })
+    
+    // Additional validation for perfume products
+    if (typeKey === "perfume") {
+      if (!dynamicValues.gender) {
+        dispatch(showModal({ type: 'error', title: 'Validation Error', message: 'Please specify gender' }))
         return
       }
-
-      if (images.length === 0) {
-        toast({ title: "Images required", description: "Please upload at least one product image before submitting." })
+      if (!dynamicValues.concentration) {
+        dispatch(showModal({ type: 'error', title: 'Validation Error', message: 'Please add a concentration' }))
         return
       }
+      if (!dynamicValues.size) {
+        dispatch(showModal({ type: 'error', title: 'Validation Error', message: 'Please add a size' }))
+        return
+      }
+    }
 
-      const payload = {
-        name: data.name,
-        brand: data.brand,
-        price: data.price,
-        originalPrice: data.originalPrice,
-        category: data.category,
-        description: data.description,
-        stockCount: data.stockCount,
-        inStock: data.inStock,
-        size: (data as any).size,
-        concentration: (data as any).concentration,
-        gender: (data as any).gender,
-        topNotes,
-        middleNotes,
-        baseNotes,
-        images: images,
-        image: images[0],
+    try {
+      // Upload images if any
+      let uploadedUrls: string[] = []
+      if (imageFiles.length) {
+        const formData = new FormData()
+        imageFiles.forEach((file) => formData.append("images", file))
+        const res = await uploadImages(formData).unwrap()
+        uploadedUrls = res?.data?.urls ?? []
       }
 
-      await createProduct(payload).unwrap()
+      // Map dynamic values to server fields when type is perfume
+      const payload: any = {
+        name,
+        brand,
+        description,
+        price: Number(price) || 0,
+        originalPrice: originalPrice === "" ? undefined : Number(originalPrice),
+        category: selectedCategoryId,
+        stockCount: Number(stockCount) || 0,
+        inStock,
 
-      toast({
-        title: "Product added successfully!",
-        description: `${data.name} has been added to your inventory.`,
-      })
+      }
 
+      if (uploadedUrls.length) {
+        payload.images = uploadedUrls
+        // keep backward compatibility for single image field
+        payload.image = uploadedUrls[0]
+      }
+
+      if (typeKey === "perfume") {
+        // Expected by Perfume schema on server
+        if (dynamicValues.size) payload.size = dynamicValues.size
+        if (dynamicValues.concentration) payload.concentration = dynamicValues.concentration
+        if (dynamicValues.gender) payload.gender = dynamicValues.gender
+        if (dynamicValues.topNotes)
+          payload.topNotes = Array.isArray(dynamicValues.topNotes)
+            ? dynamicValues.topNotes
+            : String(dynamicValues.topNotes)
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+        if (dynamicValues.middleNotes)
+          payload.middleNotes = Array.isArray(dynamicValues.middleNotes)
+            ? dynamicValues.middleNotes
+            : String(dynamicValues.middleNotes)
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+        if (dynamicValues.baseNotes)
+          payload.baseNotes = Array.isArray(dynamicValues.baseNotes)
+            ? dynamicValues.baseNotes
+            : String(dynamicValues.baseNotes)
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+      } else {
+        // For other types, store in specifications for future models
+        if (Object.keys(dynamicValues).length) {
+          payload.specifications = dynamicValues
+        }
+      }
+
+      const created = await createProduct(payload).unwrap()
+      dispatch(showModal({ 
+        type: 'success', 
+        title: 'Product created', 
+        message: `${created?.data?.name} has been added successfully` 
+      }))
       router.push("/admin/inventory")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add product. Please check required fields and try again.",
-      })
-    } finally {
-      setIsLoading(false)
+    } catch (err: any) {
+      dispatch(showModal({ 
+        type: 'error', 
+        title: 'Failed to create product', 
+        message: err?.data?.error || 'Unexpected error occurred' 
+      }))
     }
   }
-
-  if (!user || user.role !== "admin") {
-    return null
-  }
-
-  const selectedType = productTypes.find(type => type.id === selectedProductType)
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="space-y-6">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-4 mb-6">
-            <Link href="/admin/inventory">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold font-playfair gradient-text">Add Product</h1>
+              <p className="text-muted-foreground">Create a new product and set its details</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/admin/inventory">
+                <Button variant="outline">
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                </Button>
+              </Link>
+              <Button onClick={handleSubmit} disabled={isCreating || isUploading} className="gradient-primary text-white">
+                {isCreating || isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" /> Save Product
+                  </>
+                )}
               </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Add New Product</h1>
-              <p className="text-muted-foreground">Create a new product for your store</p>
             </div>
           </div>
         </motion.div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* Product Type Selection */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main form */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 space-y-6">
+            {/* Basic Info */}
+            <Card className="shadow-none">
               <CardHeader>
-                <CardTitle>Product Type</CardTitle>
-                <CardDescription>Select the type of product you want to add</CardDescription>
+                <CardTitle>Basic Information</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {productTypes.map((type) => (
-                    <div
-                      key={type.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                        selectedProductType === type.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                      onClick={() => {
-                        setSelectedProductType(type.id)
-                        setValue("productType", type.id)
-                      }}
-                    >
-                      <div className="text-center space-y-2">
-                        <div className="text-2xl">{type.icon}</div>
-                        <div className="font-medium">{type.label}</div>
-                        <div className="text-xs text-muted-foreground">{type.description}</div>
-                      </div>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Name</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name" />
+                  </div>
+                  <div>
+                    <Label htmlFor="brand">Brand</Label>
+                    <Input id="brand" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Brand name" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the product" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="price">Price ($)</Label>
+                    <Input id="price" type="number" value={price} onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <Label htmlFor="originalPrice">Original Price ($)</Label>
+                    <Input id="originalPrice" type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value === "" ? "" : Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <Label htmlFor="stockCount">Stock Count</Label>
+                    <Input id="stockCount" type="number" value={stockCount} onChange={(e) => setStockCount(e.target.value === "" ? "" : Number(e.target.value))} />
+                  </div>
+                </div>
+                {/* Rating, reviews, and badge are managed by the backend */}
+                <div className="flex items-center space-x-2">
+                  <Switch id="inStock" checked={inStock} onCheckedChange={setInStock} />
+                  <Label htmlFor="inStock">In Stock</Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Classification */}
+            <Card className="shadow-none">
+              <CardHeader>
+                <CardTitle>Classification</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Product Type</Label>
+                    <Select value={selectedTypeId} onValueChange={(v) => setSelectedTypeId(v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select product type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {types.map((t: any) => (
+                          <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <Select value={selectedCategoryId} onValueChange={(v) => setSelectedCategoryId(v)} disabled={!selectedTypeId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={selectedTypeId ? "Select category" : "Select type first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c: any) => (
+                          <SelectItem key={c._id} value={c.name}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Dynamic fields */}
+            {fields.length > 0 && (
+              <Card className="shadow-none">
+                <CardHeader>
+                  <CardTitle>Additional Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {fields.map((field) => (
+                    <div key={field.id} className="space-y-2">
+                      <Label>{field.label}{field.required ? " *" : ""}</Label>
+                      {field.type === "text" && (
+                        <Input value={dynamicValues[field.name] ?? ""} onChange={(e) => handleDynamicChange(field.name, e.target.value)} placeholder={field.placeholder} />
+                      )}
+                      {field.type === "number" && (
+                        <Input type="number" value={dynamicValues[field.name] ?? ""} onChange={(e) => handleDynamicChange(field.name, e.target.value === "" ? "" : Number(e.target.value))} placeholder={field.placeholder} />
+                      )}
+                      {field.type === "textarea" && (
+                        <Textarea value={dynamicValues[field.name] ?? ""} onChange={(e) => handleDynamicChange(field.name, e.target.value)} placeholder={field.placeholder} />
+                      )}
+                      {field.type === "select" && (
+                        <Select value={dynamicValues[field.name] ?? ""} onValueChange={(v) => handleDynamicChange(field.name, v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={field.placeholder || "Select"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(field.options || []).map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {field.type === "multiselect" && (
+                        <Input
+                          value={Array.isArray(dynamicValues[field.name]) ? (dynamicValues[field.name] as string[]).join(", ") : (dynamicValues[field.name] ?? "")}
+                          onChange={(e) => handleDynamicChange(field.name, e.target.value)}
+                          placeholder={field.placeholder || "Comma separated values"}
+                        />
+                      )}
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
+
+          {/* Images */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="shadow-none">
+              <CardHeader>
+                <CardTitle>Images</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="images">Upload Images</Label>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Button asChild variant="outline">
+                      <label htmlFor="images" className="cursor-pointer">
+                        <Upload className="h-4 w-4 mr-2" /> Choose Files
+                      </label>
+                    </Button>
+                    <input id="images" type="file" accept="image/*" multiple className="hidden" onChange={onPickImages} />
+                    {(isUploading || isCreating) && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </div>
                 </div>
-                {errors.productType && (
-                  <p className="text-sm text-destructive mt-2">{errors.productType.message}</p>
+
+                {imageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {imageUrls.map((url, idx) => (
+                      <div key={idx} className="relative group rounded-md overflow-hidden border">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-32 object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImageAt(idx)}
+                          className="absolute top-1 right-1 bg-white/90 hover:bg-white rounded-full p-1 shadow hidden group-hover:block"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
           </motion.div>
-
-          {selectedProductType && (
-            <>
-              {/* Basic Information */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Basic Information</CardTitle>
-                    <CardDescription>Enter the basic details of your {selectedType?.label.toLowerCase()}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Product Name</Label>
-                        <Input
-                          id="name"
-                          placeholder="Enter product name"
-                          {...register("name")}
-                        />
-                        {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="brand">Brand</Label>
-                        <Input
-                          id="brand"
-                          placeholder="Enter brand name"
-                          {...register("brand")}
-                        />
-                        {errors.brand && <p className="text-sm text-destructive">{errors.brand.message}</p>}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="price">Price ($)</Label>
-                        <Input
-                          id="price"
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...register("price", { valueAsNumber: true })}
-                        />
-                        {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="originalPrice">Original Price ($) - Optional</Label>
-                        <Input
-                          id="originalPrice"
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...register("originalPrice", { valueAsNumber: true })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        placeholder="Describe the product, its features, and appeal..."
-                        rows={4}
-                        {...register("description")}
-                        className="outline-none"
-                      />
-                      {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Category Selection */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Category</CardTitle>
-                    <CardDescription>Select the category for your {selectedType?.label.toLowerCase()}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Select onValueChange={(value) => setValue("category", value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Dynamic Product Fields */}
-              {productTypeFields.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Product Details</CardTitle>
-                      <CardDescription>Specific details for {selectedType?.label.toLowerCase()}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {productTypeFields.map((field) => (
-                          <div key={field.name} className="space-y-2">
-                            <Label htmlFor={field.name}>
-                              {field.label}
-                              {field.required && <span className="text-red-500 ml-1">*</span>}
-                            </Label>
-                            
-                            {field.type === 'select' ? (
-                              <Select onValueChange={(value) => setValue(field.name as any, value)}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white">
-                                  {field.options?.map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                      {option}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : field.type === 'number' ? (
-                              <Input
-                                id={field.name}
-                                type="number"
-                                step={field.name.includes('price') ? '0.01' : '1'}
-                                placeholder={field.placeholder}
-                                {...register(field.name as any, { valueAsNumber: true })}
-                              />
-                            ) : (
-                              <Input
-                                id={field.name}
-                                placeholder={field.placeholder}
-                                {...register(field.name as any)}
-                              />
-                            )}
-                            
-                            {errors[field.name as keyof typeof errors] && (
-                              <p className="text-sm text-destructive">
-                                {errors[field.name as keyof typeof errors]?.message}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
-              {/* Fragrance Notes - Only for perfumes */}
-              {selectedProductType === 'perfume' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Fragrance Notes</CardTitle>
-                      <CardDescription>Add the fragrance notes for this perfume</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Add Note */}
-                      <div className="flex gap-2">
-                        <Select value={noteType} onValueChange={(value: any) => setNoteType(value)}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="top">Top</SelectItem>
-                            <SelectItem value="middle">Middle</SelectItem>
-                            <SelectItem value="base">Base</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          placeholder="Enter note"
-                          value={newNote}
-                          onChange={(e) => setNewNote(e.target.value)}
-                          onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addNote())}
-                        />
-                        <Button type="button" onClick={addNote}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Notes Display */}
-                      <div className="space-y-4">
-                        {[
-                          { type: "top" as const, notes: topNotes, label: "Top Notes" },
-                          { type: "middle" as const, notes: middleNotes, label: "Middle Notes" },
-                          { type: "base" as const, notes: baseNotes, label: "Base Notes" },
-                        ].map(({ type, notes, label }) => (
-                          <div key={type} className="space-y-2">
-                            <Label>{label}</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {notes.map((note) => (
-                                <Badge key={note} variant="secondary" className="gap-1">
-                                  {note}
-                                  <X
-                                    className="h-3 w-3 cursor-pointer"
-                                    onClick={() => removeNote(note, type)}
-                                  />
-                                </Badge>
-                              ))}
-                              {notes.length === 0 && (
-                                <span className="text-sm text-muted-foreground">No {label.toLowerCase()} added</span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
-              {/* Images */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Product Images</CardTitle>
-                    <CardDescription>Add images for your product</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleFilesSelected}
-                        className="hidden"
-                      />
-                      <Button type="button" variant="outline" onClick={handleChooseImages} disabled={isUploading}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        {isUploading ? "Uploading..." : "Upload Images"}
-                      </Button>
-                      
-                      {images.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {images.map((image, index) => (
-                            <div key={index} className="relative group">
-                              <img
-                                src={image}
-                                alt={`Product ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border"
-                              />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => removeImage(index)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Stock Information */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Stock Information</CardTitle>
-                    <CardDescription>Manage inventory for this product</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="stockCount">Stock Count</Label>
-                        <Input
-                          id="stockCount"
-                          type="number"
-                          placeholder="0"
-                          {...register("stockCount", { valueAsNumber: true })}
-                        />
-                        {errors.stockCount && <p className="text-sm text-destructive">{errors.stockCount.message}</p>}
-                      </div>
-
-                      <div className="flex items-center space-x-2 pt-8">
-                        <Checkbox
-                          id="inStock"
-                          checked={watch("inStock")}
-                          onCheckedChange={(checked) => setValue("inStock", !!checked)}
-                        />
-                        <Label htmlFor="inStock">In Stock</Label>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Submit Button */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="flex gap-4"
-              >
-                <Button type="submit" disabled={isLoading} className="flex-1">
-                  {isLoading ? "Adding Product..." : "Add Product"}
-                </Button>
-                <Link href="/admin/inventory">
-                  <Button type="button" variant="outline">
-                    Cancel
-                  </Button>
-                </Link>
-              </motion.div>
-            </>
-          )}
-        </form>
+        </div>
       </div>
     </AdminLayout>
   )

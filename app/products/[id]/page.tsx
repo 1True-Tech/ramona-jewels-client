@@ -21,64 +21,154 @@ import {
   Gem,
   Award,
   Clock,
+  Loader2,
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
-import { useToast } from "@/hooks/use-toast"
-import { allProducts, type JewelryProduct, type PerfumeProduct } from "@/lib/product-data"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
+import { useGetProductQuery, useGetProductsQuery } from "@/store/api/productsApi"
+import type { Product as ApiProduct } from "@/store/apiTypes"
 import { Navbar } from "@/components/layouts/navbar"
-import { Product, ProductCard } from "@/components/products/product-card"
+import { ProductCard } from "@/components/products/product-card"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 
-export default function ProductDetailPage() {
-  const params = useParams()
-  const productId = params.id as string
+// Helper: build server/base URL for images
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
+  try {
+    return API_URL ? new URL(API_URL).origin : ""
+  } catch {
+    return ""
+  }
+})()
 
-  // Find the product by ID
-  const product = allProducts.find((p) => p.id === productId) || allProducts[0]
+const toImageUrl = (img?: string | null) => {
+  if (!img) return "/placeholder.svg"
+  if (img.startsWith("http")) return img
+  if (img.startsWith("/uploads")) return `${SERVER_URL}${img}`
+  return img
+}
 
-  const [selectedImage, setSelectedImage] = useState(0)
+// Local type for details page - using only backend data
+interface ExtendedProduct {
+  id: string
+  name: string
+  price: number
+  originalPrice?: number
+  image: string
+  images: string[]
+  rating?: number
+  reviews?: number
+  badge?: string
+  type?: "jewelry" | "perfume"
+  category: string
+  brand: string
+  description: string
+  stockCount: number
+  inStock: boolean
+  // Backend-driven fields only
+  size?: string
+  concentration?: string
+  gender?: string
+  topNotes?: string[]
+  middleNotes?: string[]
+  baseNotes?: string[]
+}
+
+const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
+  id: backendProduct._id,
+  name: backendProduct.name,
+  price: backendProduct.price,
+  originalPrice: backendProduct.originalPrice,
+  image: toImageUrl(backendProduct.images?.[0]),
+  images: backendProduct.images?.map(toImageUrl) || [toImageUrl(backendProduct.images?.[0])],
+  rating: 4.5, // TODO: Replace with actual rating from backend
+  reviews: 12, // TODO: Replace with actual review count from backend
+  badge: backendProduct.originalPrice && backendProduct.originalPrice > backendProduct.price ? "Sale" : undefined,
+  type: (backendProduct.type as any) || "perfume",
+  category: backendProduct.category,
+  brand: backendProduct.brand,
+  description: backendProduct.description,
+  stockCount: backendProduct.stock || 0,
+  inStock: (backendProduct.isActive ?? true) && (backendProduct.stock ?? 0) > 0,
+  // Use only backend data - no mock values
+  size: backendProduct.size,
+  concentration: backendProduct.concentration,
+  gender: backendProduct.gender,
+  topNotes: backendProduct.topNotes || [],
+  middleNotes: backendProduct.middleNotes || [],
+  baseNotes: backendProduct.baseNotes || [],
+})
+ export default function ProductDetailPage() {
+   const params = useParams()
+   const productId = params.id as string
+
+  // Fetch product and related
+  const { data: productResponse, isLoading: isProductLoading, error: productError } = useGetProductQuery(productId)
+  const { data: productsResponse } = useGetProductsQuery({ limit: 12 })
+ 
+   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const { addItem } = useCart()
-  const { toast } = useToast()
+  const dispatch = useAppDispatch()
 
-  // Get related products (same type, different products)
-  const relatedProducts = allProducts
-    .filter((p) => p.type === product.type && p.id !== product.id)
-    .slice(0, 4)
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      originalPrice: p.originalPrice,
-      image: p.image,
-      rating: p.rating,
-      reviews: p.reviews,
-      badge: p.badge,
-      type: p.type,
-    }))
-
-  const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      addItem({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-      })
-    }
-    toast({
-      title: "Added to cart",
-      description: `${quantity} ${product.name}(s) added to your cart.`,
-    })
+  if (isProductLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading product...</span>
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-    : 0
+  if (productError || !productResponse?.data) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Product Not Found</h2>
+            <p className="text-muted-foreground">The product you're looking for doesn't exist.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
+  const product = toUIProduct(productResponse.data)
+ 
+  // Related products (same category, exclude current)
+  const relatedProducts = (productsResponse?.data || [])
+    .filter((p) => p.category === product.category && p._id !== productId)
+    .slice(0, 4)
+    .map(toUIProduct)
+ 
+   const handleAddToCart = () => {
+     for (let i = 0; i < quantity; i++) {
+       addItem({
+         id: product.id,
+         name: product.name,
+         price: product.price,
+         image: product.image,
+       })
+     }
+     dispatch(showModal({
+       type: 'success',
+       title: 'Added to cart',
+       message: `${quantity} ${product.name}(s) added to your cart.`
+     }))
+   }
+ 
+   const discount = product.originalPrice
+     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+     : 0
+ 
   const isJewelry = product.type === "jewelry"
-  const jewelryProduct = product as JewelryProduct
-  const perfumeProduct = product as PerfumeProduct
 
   return (
     <div className="min-h-screen bg-background">
@@ -181,78 +271,79 @@ export default function ProductDetailPage() {
               <p className="text-muted-foreground text-lg leading-relaxed">{product.description}</p>
             </div>
 
-            {/* Product Specifications */}
-            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
-              {isJewelry ? (
-                <>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold gradient-text">{jewelryProduct.material}</div>
-                    <div className="text-sm text-muted-foreground">Material</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold gradient-text">{jewelryProduct.gemstone || "N/A"}</div>
-                    <div className="text-sm text-muted-foreground">Gemstone</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold gradient-text">{jewelryProduct.weight || "N/A"}</div>
-                    <div className="text-sm text-muted-foreground">Weight</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold gradient-text">{jewelryProduct.collection}</div>
-                    <div className="text-sm text-muted-foreground">Collection</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold gradient-text">{perfumeProduct.size}</div>
-                    <div className="text-sm text-muted-foreground">Volume</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold gradient-text">{perfumeProduct.concentration}</div>
-                    <div className="text-sm text-muted-foreground">Concentration</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold gradient-text">{perfumeProduct.gender}</div>
-                    <div className="text-sm text-muted-foreground">For</div>
-                  </div>
-                  <div className="text-center">
+            {/* Product Specifications - Only show if data exists */}
+            {((!isJewelry && (product.size || product.concentration || product.gender)) || 
+              (isJewelry && product.stockCount)) && (
+              <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
+                {!isJewelry ? (
+                  <>
+                    {product.size && (
+                      <div className="text-center">
+                        <div className="text-2xl font-bold gradient-text">{product.size}</div>
+                        <div className="text-sm text-muted-foreground">Volume</div>
+                      </div>
+                    )}
+                    {product.concentration && (
+                      <div className="text-center">
+                        <div className="text-2xl font-bold gradient-text">{product.concentration}</div>
+                        <div className="text-sm text-muted-foreground">Concentration</div>
+                      </div>
+                    )}
+                    {product.gender && (
+                      <div className="text-center">
+                        <div className="text-2xl font-bold gradient-text">{product.gender}</div>
+                        <div className="text-sm text-muted-foreground">For</div>
+                      </div>
+                    )}
+                    <div className="text-center">
+                      <div className="text-2xl font-bold gradient-text">{product.stockCount}</div>
+                      <div className="text-sm text-muted-foreground">In Stock</div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center col-span-2">
                     <div className="text-2xl font-bold gradient-text">{product.stockCount}</div>
                     <div className="text-sm text-muted-foreground">In Stock</div>
                   </div>
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
-            {/* Fragrance Notes (for perfumes) */}
-            {!isJewelry && (
+            {/* Fragrance Notes (for perfumes) - Only show if notes exist */}
+            {!isJewelry && (product.topNotes?.length || product.middleNotes?.length || product.baseNotes?.length) && (
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
                   Fragrance Notes
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex gap-3">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 mt-1 flex-shrink-0"></div>
-                    <div>
-                      <span className="font-medium text-amber-600">Top Notes:</span>
-                      <span className="text-muted-foreground ml-2">{perfumeProduct.topNotes.join(", ")}</span>
+                  {product.topNotes && product.topNotes?.length > 0 && (
+                    <div className="flex gap-3">
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 mt-1 flex-shrink-0"></div>
+                      <div>
+                        <span className="font-medium text-amber-600">Top Notes:</span>
+                        <span className="text-muted-foreground ml-2">{product.topNotes.join(", ")}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 mt-1 flex-shrink-0"></div>
-                    <div>
-                      <span className="font-medium text-orange-600">Middle Notes:</span>
-                      <span className="text-muted-foreground ml-2">{perfumeProduct.middleNotes.join(", ")}</span>
+                  )}
+                  {product.middleNotes && product.middleNotes?.length > 0 && (
+                    <div className="flex gap-3">
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 mt-1 flex-shrink-0"></div>
+                      <div>
+                        <span className="font-medium text-orange-600">Middle Notes:</span>
+                        <span className="text-muted-foreground ml-2">{product.middleNotes.join(", ")}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 mt-1 flex-shrink-0"></div>
-                    <div>
-                      <span className="font-medium text-yellow-600">Base Notes:</span>
-                      <span className="text-muted-foreground ml-2">{perfumeProduct.baseNotes.join(", ")}</span>
+                  )}
+                  {product.baseNotes && product.baseNotes?.length > 0 && (
+                    <div className="flex gap-3">
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 mt-1 flex-shrink-0"></div>
+                      <div>
+                        <span className="font-medium text-yellow-600">Base Notes:</span>
+                        <span className="text-muted-foreground ml-2">{product.baseNotes.join(", ")}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -359,7 +450,7 @@ export default function ProductDetailPage() {
                 value="specifications"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
-                {isJewelry ? "Specifications" : "Fragrance Profile"}
+                Fragrance Profile
               </TabsTrigger>
               <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
                 Reviews
@@ -371,113 +462,19 @@ export default function ProductDetailPage() {
                 <h3 className="text-xl font-semibold mb-4">About This {isJewelry ? "Piece" : "Fragrance"}</h3>
                 <p className="text-muted-foreground mb-6 text-lg leading-relaxed">{product.description}</p>
 
-                <div className="grid md:grid-cols-2 gap-6 mt-8">
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
-                    <h4 className="font-semibold mb-2 text-primary flex items-center gap-2">
-                      <Award className="h-4 w-4" />
-                      Perfect For
-                    </h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {isJewelry ? (
-                        <>
-                          <li>• Special occasions</li>
-                          <li>• Anniversary gifts</li>
-                          <li>• Elegant evenings</li>
-                          <li>• Sophisticated style</li>
-                        </>
-                      ) : (
-                        <>
-                          <li>• Evening occasions</li>
-                          <li>• Special events</li>
-                          <li>• Romantic dinners</li>
-                          <li>• Confident personalities</li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
-                    <h4 className="font-semibold mb-2 text-primary flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      {isJewelry ? "Care Instructions" : "Longevity"}
-                    </h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {isJewelry ? (
-                        <>
-                          <li>• Store in jewelry box</li>
-                          <li>• Clean with soft cloth</li>
-                          <li>• Avoid harsh chemicals</li>
-                          <li>• Professional cleaning yearly</li>
-                        </>
-                      ) : (
-                        <>
-                          <li>• 6-8 hours wear time</li>
-                          <li>• Moderate sillage</li>
-                          <li>• Best in cool weather</li>
-                          <li>• Apply to pulse points</li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-                </div>
+                {/* Additional product details will be displayed when available from the backend */}
               </div>
             </TabsContent>
 
             <TabsContent value="specifications" className="mt-6">
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold mb-4">
-                  {isJewelry ? "Detailed Specifications" : "Fragrance Pyramid"}
+                  Fragrance Pyramid
                 </h3>
 
                 {isJewelry ? (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-lg border border-primary/20">
-                        <h4 className="font-semibold mb-2">Materials & Construction</h4>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Material:</span>
-                            <span className="font-medium">{jewelryProduct.material}</span>
-                          </div>
-                          {jewelryProduct.gemstone && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Gemstone:</span>
-                              <span className="font-medium">{jewelryProduct.gemstone}</span>
-                            </div>
-                          )}
-                          {jewelryProduct.weight && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Weight:</span>
-                              <span className="font-medium">{jewelryProduct.weight}</span>
-                            </div>
-                          )}
-                          {jewelryProduct.size && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Size:</span>
-                              <span className="font-medium">{jewelryProduct.size}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-lg border border-primary/20">
-                        <h4 className="font-semibold mb-2">Collection Details</h4>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Collection:</span>
-                            <span className="font-medium">{jewelryProduct.collection}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Brand:</span>
-                            <span className="font-medium">{product.brand}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Category:</span>
-                            <span className="font-medium capitalize">{product.category}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>Jewelry specifications will be displayed when available from the backend.</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -487,7 +484,7 @@ export default function ProductDetailPage() {
                         Top Notes (First 15 minutes)
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {perfumeProduct.topNotes.map((note, index) => (
+                        {(product.topNotes || []).map((note, index) => (
                           <Badge
                             key={index}
                             variant="secondary"
@@ -505,7 +502,7 @@ export default function ProductDetailPage() {
                         Middle Notes (Heart - 2-4 hours)
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {perfumeProduct.middleNotes.map((note, index) => (
+                        {(product.middleNotes || []).map((note, index) => (
                           <Badge
                             key={index}
                             variant="secondary"
@@ -523,7 +520,7 @@ export default function ProductDetailPage() {
                         Base Notes (Dry down - 4+ hours)
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {perfumeProduct.baseNotes.map((note, index) => (
+                        {(product.baseNotes || []).map((note, index) => (
                           <Badge
                             key={index}
                             variant="secondary"
@@ -582,24 +579,8 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {/* Sample reviews */}
-                  <div className="p-4 rounded-lg border border-primary/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        ))}
-                      </div>
-                      <span className="font-medium">Sarah M.</span>
-                      <span className="text-sm text-muted-foreground">Verified Purchase</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      {isJewelry
-                        ? "Absolutely stunning piece! The craftsmanship is exceptional and it looks even better in person. Perfect for special occasions."
-                        : "Absolutely love this fragrance! The scent is sophisticated and long-lasting. Perfect for evening wear."}
-                    </p>
-                  </div>
+                <div className="text-center text-muted-foreground py-8">
+                  <p>Customer reviews will be displayed when available from the backend.</p>
                 </div>
               </div>
             </TabsContent>
@@ -622,7 +603,7 @@ export default function ProductDetailPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
-                <ProductCard key={relatedProduct.id} product={relatedProduct as Product} />
+                <ProductCard key={relatedProduct.id} product={relatedProduct} />
               ))}
             </div>
           </motion.div>

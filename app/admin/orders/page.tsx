@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/redux-auth-context"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 import { 
   useGetOrdersQuery,
   useGetOrderStatsQuery
@@ -31,6 +33,7 @@ import {
 export default function AdminOrdersPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const dispatch = useAppDispatch()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all")

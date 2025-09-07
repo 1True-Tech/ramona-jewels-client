@@ -2,6 +2,8 @@
 
 import * as React from "react"
 import type { ToasterProps, Action as ToasterAction } from "sonner"
+import { store } from "@/store"
+import { showModal } from "@/store/slices/uiSlice"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -123,23 +125,31 @@ const variantClasses: Record<ToastVariant, string> = {
 function toast({ variant = "default", ...props }: Toast) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
+  // Map toast variants to modal types
+  const variantToType: Record<string, 'success' | 'error' | 'warning'> = {
+    default: 'warning',
+    info: 'warning',
+    warning: 'warning',
+    success: 'success',
+    destructive: 'error',
+  }
+
+  const type = variantToType[variant] ?? 'warning'
+  const title = (props.title as string) || (type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Notice')
+  const message = (props.description as string) || ''
+
+  // Dispatch global modal instead of showing a toast
+  store.dispatch(
+    showModal({
+      type,
+      title,
+      message,
     })
+  )
 
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      className: `${props.className ?? ""} ${variantClasses[variant]}`,
-      variant,
-    },
-  })
+  // Return a noop controller to avoid breaking callers
+  const update = (_props: ToasterToast) => {}
+  const dismiss = () => {}
 
   return { id, dismiss, update }
 }

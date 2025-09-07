@@ -29,6 +29,8 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { userApiService, UpdateProfileData, ChangePasswordData } from "@/lib/api/userApi"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 import { 
   validateProfile, 
   validatePassword, 

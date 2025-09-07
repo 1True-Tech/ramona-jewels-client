@@ -42,14 +42,19 @@ const stats = [
 ]
 
 export default function AdminDashboard() {
-  const { user } = useAuth()
+  const { user, hydrated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
+    if (!hydrated) return
     if (!user || user.role !== "admin") {
       router.push("/auth/login")
     }
-  }, [user, router])
+  }, [user, router, hydrated])
+
+  if (!hydrated) {
+    return null
+  }
 
   if (!user || user.role !== "admin") {
     return null

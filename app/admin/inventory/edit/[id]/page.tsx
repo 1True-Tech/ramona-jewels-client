@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/redux-auth-context"
-import { allProducts, type Product, type JewelryProduct, type PerfumeProduct } from "@/lib/product-data"
+import { useGetProductQuery, useUpdateProductMutation } from "@/store/api/productsApi"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -24,37 +24,105 @@ export default function EditProductPage() {
   const params = useParams()
   const productId = params.id as string
 
-  const [product, setProduct] = useState<Product | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: productResponse, isLoading, error: productError } = useGetProductQuery(productId)
+  const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation()
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!user || user.role !== "admin") {
-      router.push("/auth/login")
-      return
-    }
+  const apiProduct = productResponse?.data
+  const product = apiProduct
+    ? {
+        id: apiProduct._id,
+        name: apiProduct.name,
+        brand: apiProduct.brand,
+        description: apiProduct.description,
+        category: apiProduct.category,
+        price: apiProduct.price,
+        originalPrice: apiProduct.originalPrice,
+        image: (apiProduct.images && apiProduct.images[0]) || "/placeholder.svg",
+        stockCount: apiProduct.stock ?? 0,
+        inStock: (apiProduct.isActive ?? true) && (apiProduct.stock ?? 0) > 0,
+        type: apiProduct.type ?? "perfume",
+        // Backend-driven fields only
+        size: apiProduct.size || "",
+        concentration: apiProduct.concentration || "",
+        gender: apiProduct.gender || "unisex",
+      }
+    : null
 
-    // Find the product
-    const foundProduct = allProducts.find(p => p.id === productId)
-    if (foundProduct) {
-      setProduct(foundProduct)
+  // Local state to capture controlled Select values we need to send back
+  const [category, setCategory] = useState<string>("")
+  const [gender, setGender] = useState<string>("unisex")
+
+  useEffect(() => {
+    if (product) {
+      setCategory(product.category || "")
+      setGender((product.gender as string) || "unisex")
     }
-    setLoading(false)
-  }, [user, router, productId])
+  }, [product?.id])
 
   const handleSave = async () => {
-    setSaving(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setSaving(false)
-    router.push("/admin/products")
+    if (!product) return
+    try {
+      setSaving(true)
+      // Read values from inputs by id
+      const nameEl = document.getElementById("name") as HTMLInputElement | null
+      const brandEl = document.getElementById("brand") as HTMLInputElement | null
+      const descEl = document.getElementById("description") as HTMLTextAreaElement | null
+      const priceEl = document.getElementById("price") as HTMLInputElement | null
+      const originalPriceEl = document.getElementById("originalPrice") as HTMLInputElement | null
+      const stockEl = document.getElementById("stockCount") as HTMLInputElement | null
+      const inStockEl = document.getElementById("inStock") as HTMLInputElement | null
+      const sizeEl = document.getElementById("size") as HTMLInputElement | null
+      const concentrationEl = document.getElementById("concentration") as HTMLInputElement | null
+
+      const payload: any = {}
+      if (nameEl) payload.name = nameEl.value.trim()
+      if (brandEl) payload.brand = brandEl.value.trim()
+      if (descEl) payload.description = descEl.value.trim()
+
+      // Use controlled state for Select values
+      if (category) payload.category = category
+
+      if (priceEl) {
+        const priceNum = parseFloat(priceEl.value)
+        if (!Number.isNaN(priceNum)) payload.price = priceNum
+      }
+      if (originalPriceEl && originalPriceEl.value !== "") {
+        const opNum = parseFloat(originalPriceEl.value)
+        if (!Number.isNaN(opNum)) payload.originalPrice = opNum
+      } else {
+        payload.originalPrice = undefined
+      }
+      if (stockEl) {
+        const stockNum = parseInt(stockEl.value, 10)
+        if (!Number.isNaN(stockNum)) payload.stockCount = stockNum
+      }
+      if (inStockEl) payload.inStock = inStockEl.checked
+
+      if (sizeEl && sizeEl.value) payload.size = sizeEl.value
+      if (concentrationEl && concentrationEl.value) payload.concentration = concentrationEl.value
+
+      // Map gender to backend accepted casing
+      if (gender) {
+        const map: Record<string, string> = { men: "Men", women: "Women", unisex: "Unisex" }
+        payload.gender = map[gender] || gender
+      }
+
+      await updateProduct({ id: productId, data: payload }).unwrap()
+      router.push("/admin/inventory")
+    } catch (e) {
+      // Errors are surfaced by global modal in baseQuery
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (!user || user.role !== "admin") {
     return null
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <AdminLayout>
         <div className="space-y-8">
@@ -67,7 +135,7 @@ export default function EditProductPage() {
     )
   }
 
-  if (!product) {
+  if (productError || !product) {
     return (
       <AdminLayout>
         <div className="space-y-8">
@@ -145,25 +213,14 @@ export default function EditProductPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="category">Category</Label>
-                    <Select defaultValue={product.category}>
+                    <Select value={category} onValueChange={setCategory}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {product.type === "jewelry" ? (
-                          <>
-                            <SelectItem value="rings">Rings</SelectItem>
-                            <SelectItem value="necklaces">Necklaces</SelectItem>
-                            <SelectItem value="earrings">Earrings</SelectItem>
-                            <SelectItem value="bracelets">Bracelets</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="eau-de-parfum">Eau de Parfum</SelectItem>
-                            <SelectItem value="eau-de-toilette">Eau de Toilette</SelectItem>
-                            <SelectItem value="cologne">Cologne</SelectItem>
-                          </>
-                        )}
+                        <SelectItem value="eau-de-parfum">Eau de Parfum</SelectItem>
+                        <SelectItem value="eau-de-toilette">Eau de Toilette</SelectItem>
+                        <SelectItem value="cologne">Cologne</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -174,7 +231,6 @@ export default function EditProductPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="jewelry">Jewelry</SelectItem>
                         <SelectItem value="perfume">Perfume</SelectItem>
                       </SelectContent>
                     </Select>
@@ -214,58 +270,37 @@ export default function EditProductPage() {
             <Card className="shadow-none">
               <CardHeader>
                 <CardTitle>
-                  {product.type === "jewelry" ? "Jewelry Details" : "Perfume Details"}
+                  Perfume Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {product.type === "jewelry" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="material">Material</Label>
-                      <Input id="material" defaultValue={(product as JewelryProduct).material} />
-                    </div>
-                    <div>
-                      <Label htmlFor="gemstone">Gemstone</Label>
-                      <Input id="gemstone" defaultValue={(product as JewelryProduct).gemstone || ""} />
-                    </div>
-                    <div>
-                      <Label htmlFor="size">Size</Label>
-                      <Input id="size" defaultValue={(product as JewelryProduct).size || ""} />
-                    </div>
-                    <div>
-                      <Label htmlFor="collection">Collection</Label>
-                      <Input id="collection" defaultValue={(product as JewelryProduct).collection || ""} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="size">Size</Label>
-                      <Input id="size" defaultValue={(product as PerfumeProduct).size} />
-                    </div>
-                    <div>
-                      <Label htmlFor="concentration">Concentration</Label>
-                      <Input id="concentration" defaultValue={(product as PerfumeProduct).concentration} />
-                    </div>
-                    <div>
-                      <Label htmlFor="gender">Gender</Label>
-                      <Select defaultValue={(product as PerfumeProduct).gender}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unisex">Unisex</SelectItem>
-                          <SelectItem value="men">Men</SelectItem>
-                          <SelectItem value="women">Women</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="longevity">Longevity</Label>
-                      <Input id="longevity" defaultValue={String((product as PerfumeProduct).longevity ?? "0")} />
-                    </div>
-                  </div>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div>
+    <Label htmlFor="size">Size</Label>
+    <Input id="size" defaultValue={product.size || ""} />
+  </div>
+  {product.type === "perfume" && (
+    <>
+      <div>
+        <Label htmlFor="concentration">Concentration</Label>
+        <Input id="concentration" defaultValue={product.concentration || ""} />
+      </div>
+      <div>
+        <Label htmlFor="gender">Gender</Label>
+        <Select value={gender} onValueChange={setGender}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unisex">Unisex</SelectItem>
+            <SelectItem value="men">Men</SelectItem>
+            <SelectItem value="women">Women</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </>
+  )}
+</div>
               </CardContent>
             </Card>
           </motion.div>
@@ -308,13 +343,13 @@ export default function EditProductPage() {
               <CardContent className="space-y-3">
                 <Button 
                   onClick={handleSave} 
-                  disabled={saving}
+                  disabled={saving || isUpdating}
                   className="w-full gradient-primary text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving || isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
-                <Link href="/admin/products" className="block">
+                <Link href="/admin/inventory" className="block">
                   <Button variant="outline" className="w-full">
                     Cancel
                   </Button>

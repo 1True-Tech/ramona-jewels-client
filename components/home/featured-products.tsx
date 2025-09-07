@@ -1,34 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Gem, Sparkles } from "lucide-react";
-import { allProducts } from "@/lib/product-data";
-import { Product, ProductCard } from "../products/product-card";
+// import { allProducts } from "@/lib/product-data";
+import { Product as UIProduct, ProductCard } from "../products/product-card";
+import { useGetProductsQuery } from "@/store/api/productsApi";
+import type { Product as ApiProduct } from "@/store/apiTypes";
 
-const featuredProducts = allProducts.slice(0, 6).map((product) => ({
-  id: product.id,
-  name: product.name,
-  price: product.price,
-  originalPrice: product.originalPrice,
-  image: product.image,
-  rating: product.rating,
-  reviews: product.reviews,
-  badge: product.badge,
-  type: product.type, // 'jewelry' or 'perfumes'
-}));
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
+  try {
+    return API_URL ? new URL(API_URL).origin : "";
+  } catch {
+    return "";
+  }
+})();
+const toImageUrl = (src?: string) => {
+  if (!src) return "/placeholder.svg";
+  if (/^https?:\/\//i.test(src)) return src;
+  const path = src.startsWith("/") ? src : `/${src}`;
+  return `${SERVER_URL}${path}`;
+};
+
+const toUIProduct = (p: ApiProduct): UIProduct => ({
+  id: p._id,
+  name: p.name,
+  price: p.price,
+  originalPrice: p.originalPrice,
+  image: toImageUrl(p.images?.[0]),
+  type: (p.type === "perfume" || p.type === "jewelry") ? (p.type as "perfume" | "jewelry") : undefined,
+});
 
 export function FeaturedProducts() {
   const [selectedCategory, setSelectedCategory] = useState<"All" | "Jewelry" | "Perfumes">("All");
+  const { data } = useGetProductsQuery();
 
-  const filteredProducts =
-    selectedCategory === "All"
-      ? featuredProducts
-      : featuredProducts.filter(
-          (product) => product.type.toLowerCase() === selectedCategory.toLowerCase()
-        );
+  const featured = useMemo(() => {
+    const items = data?.data ?? [];
+    // pick up to 8 items for grid; you can adjust as needed
+    return items.slice(0, 8).map(toUIProduct);
+  }, [data]);
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === "All") return featured;
+    const type = selectedCategory === "Jewelry" ? "jewelry" : "perfume";
+    return featured.filter((p) => p.type === type);
+  }, [featured, selectedCategory]);
 
   return (
     <section className="py-16 lg:py-24 px-[16px] md:px-6 lg:px-[5rem] xl:px-[8.5rem]">
@@ -59,12 +79,12 @@ export function FeaturedProducts() {
           className="flex justify-center mb-12"
         >
           <div className="flex items-center space-x-4 bg-gradient-to-r from-amber-50 to-orange-50 p-2 rounded-full border border-primary">
-            {["All", "Jewelry", "Perfumes"].map((category) => (
+            {(["All", "Jewelry", "Perfumes"] as const).map((category) => (
               <Button
                 key={category}
                 size="sm"
                 variant="ghost"
-                onClick={() => setSelectedCategory(category as "All" | "Jewelry" | "Perfumes")}
+                onClick={() => setSelectedCategory(category)}
                 className={`rounded-full w-[6.3rem] md:w-[7rem] ${
                   selectedCategory === category
                     ? "gradient-primary text-white border-0"
@@ -93,7 +113,7 @@ export function FeaturedProducts() {
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
               >
-                <ProductCard product={product as Product} />
+                <ProductCard product={product} />
               </motion.div>
             ))}
           </AnimatePresence>

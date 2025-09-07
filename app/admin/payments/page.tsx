@@ -23,7 +23,8 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { useAuth } from "@/contexts/redux-auth-context"
-import { useToast } from "@/hooks/use-toast"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 
 // Mock payment data
 const mockPayments = [
@@ -108,9 +109,9 @@ const paymentMethods = [
 ]
 
 export default function AdminPaymentsPage() {
-  const { user } = useAuth()
+  const { user, hydrated } = useAuth()
   const router = useRouter()
-  const { toast } = useToast()
+  const dispatch = useAppDispatch()
   const [payments, setPayments] = useState(mockPayments)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedMethod, setSelectedMethod] = useState("all")
@@ -119,10 +120,11 @@ export default function AdminPaymentsPage() {
   const [filteredPayments, setFilteredPayments] = useState(mockPayments)
 
   useEffect(() => {
+    if (!hydrated) return
     if (!user || user.role !== "admin") {
       router.push("/auth/login")
     }
-  }, [user, router])
+  }, [hydrated, user, router])
 
   useEffect(() => {
     let filtered = payments
@@ -192,7 +194,7 @@ export default function AdminPaymentsPage() {
     .filter((p) => p.status === "pending" || p.status === "processing")
     .reduce((sum, p) => sum + p.amount, 0)
 
-  if (!user || user.role !== "admin") {
+  if (!hydrated || !user || user.role !== "admin") {
     return null
   }
 
