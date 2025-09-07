@@ -224,7 +224,7 @@ export default function ProductsPage() {
               selectedCategory={selectedCategory}
               onCategoryChange={setSelectedCategory}
               selectedType={selectedType}
--             onTypeChange={setSelectedType}
+              // onTypeChange={setSelectedType}
               priceRange={priceRange}
               onPriceRangeChange={setPriceRange}
             />

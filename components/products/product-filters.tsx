@@ -13,7 +13,6 @@ interface ProductFiltersProps {
   selectedCategory: string
   onCategoryChange: (category: string) => void
   selectedType: "all" | "jewelry" | "perfume"
-- onTypeChange: (type: "all" | "jewelry" | "perfume") => void
   priceRange: number[]
   onPriceRangeChange: (range: number[]) => void
 }
@@ -43,7 +42,6 @@ export function ProductFilters({
   selectedCategory,
   onCategoryChange,
   selectedType,
-  onTypeChange,
   priceRange,
   onPriceRangeChange,
 }: ProductFiltersProps) {
