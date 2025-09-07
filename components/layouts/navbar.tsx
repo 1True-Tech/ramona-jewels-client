@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
 import { useWishlist } from "@/contexts/wishlist-context"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -22,14 +22,12 @@ export function Navbar() {
 
   const navigation = [
     { name: "Home", href: "/" },
-    { name: "Jewelry", href: "/jewelry" },
-    { name: "Perfumes", href: "/perfumes" },
     { name: "Collections", href: "/products" },
     { name: "About", href: "/about" },
   ]
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-2xl supports-[backdrop-filter]:bg-white border-b border-primary/20 px-[16px] md:px-6 lg:px-[8.5rem]">
+    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-2xl supports-[backdrop-filter]:bg-white border-b border-primary/20 px-[16px] md:px-6 xl:px-[8.5rem]">
       <div className="w-full mx-auto">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}

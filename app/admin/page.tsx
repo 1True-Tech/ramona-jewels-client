@@ -8,7 +8,7 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { StatsCard } from "@/components/admin/stats-card"
 import { RecentOrders } from "@/components/admin/recent-orders"
 import { SalesChart } from "@/components/admin/sales-chart"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 
 const stats = [
   {
@@ -42,14 +42,19 @@ const stats = [
 ]
 
 export default function AdminDashboard() {
-  const { user } = useAuth()
+  const { user, hydrated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
+    if (!hydrated) return
     if (!user || user.role !== "admin") {
       router.push("/auth/login")
     }
-  }, [user, router])
+  }, [user, router, hydrated])
+
+  if (!hydrated) {
+    return null
+  }
 
   if (!user || user.role !== "admin") {
     return null

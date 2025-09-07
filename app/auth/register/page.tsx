@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Eye, EyeOff, Store, Mail, Lock, User } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/redux-auth-context"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -32,7 +33,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { register: registerUser } = useAuth()
-  const { toast } = useToast()
+  const dispatch = useAppDispatch()
   const router = useRouter()
 
   const {
@@ -47,17 +48,18 @@ export default function RegisterPage() {
     setIsLoading(true)
     try {
       await registerUser(data.name, data.email, data.password)
-      toast({
-        title: "Welcome to Ramona Jewels!",
-        description: "Your account has been created successfully.",
-      })
+      dispatch(showModal({
+        type: 'success',
+        title: 'Welcome to Ramona Jewels!',
+        message: 'Your account has been created successfully.'
+      }))
       router.push("/")
     } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: "Please try again with different credentials.",
-        // variant: "destructive",
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Registration failed',
+        message: 'Please try again with different credentials.'
+      }))
     } finally {
       setIsLoading(false)
     }

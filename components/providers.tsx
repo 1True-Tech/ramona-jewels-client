@@ -2,16 +2,26 @@
 
 import type React from "react"
 
-import { AuthProvider } from "@/contexts/auth-context"
+import { ReduxProvider } from "@/components/providers/redux-provider"
+import { ReduxAuthProvider } from "@/contexts/redux-auth-context"
 import { CartProvider } from "@/contexts/cart-context"
 import { WishlistProvider } from "@/contexts/wishlist-context"
+import { OrderTrackingProvider } from "@/contexts/order-tracking-context"
+import UIResponseModalProvider from "@/components/providers/ui-response-modal-provider"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-      <AuthProvider>
+    <ReduxProvider>
+      <ReduxAuthProvider>
         <CartProvider>
-          <WishlistProvider>{children}</WishlistProvider>
+          <WishlistProvider>
+            <OrderTrackingProvider>
+              {children}
+              <UIResponseModalProvider />
+            </OrderTrackingProvider>
+          </WishlistProvider>
         </CartProvider>
-      </AuthProvider>
+      </ReduxAuthProvider>
+    </ReduxProvider>
   )
 }

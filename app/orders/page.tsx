@@ -22,7 +22,8 @@ import {
 } from "lucide-react"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
+import { useOrderTracking } from "@/contexts/order-tracking-context"
 
 interface Order {
   id: string
@@ -41,6 +42,7 @@ interface Order {
 
 export default function OrdersPage() {
   const { user } = useAuth()
+  const { getOrderTracking } = useOrderTracking()
   const [orders, setOrders] = useState<Order[]>([])
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -198,10 +200,24 @@ export default function OrdersPage() {
                         <div>
                           <CardTitle className="flex items-center gap-2">
                             <span>Order {order.id}</span>
-                            <Badge className={getStatusColor(order.status)}>
-                              {getStatusIcon(order.status)}
-                              <span className="ml-1 capitalize">{order.status}</span>
-                            </Badge>
+                            {(() => {
+                              const tracking = getOrderTracking(order.id)
+                              const currentStatus = tracking?.currentStatus || order.status
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <Badge className={getStatusColor(currentStatus)}>
+                                    {getStatusIcon(currentStatus)}
+                                    <span className="ml-1 capitalize">{currentStatus.replace('_', ' ')}</span>
+                                  </Badge>
+                                  {tracking?.isRealTimeEnabled && (
+                                    <div className="flex items-center gap-1 text-xs text-green-600">
+                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                      Live
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </CardTitle>
                           <CardDescription className="flex items-center gap-4 mt-2">
                             <span className="flex items-center gap-1">
@@ -209,6 +225,14 @@ export default function OrdersPage() {
                               Placed on {order.createdAt.toLocaleDateString()}
                             </span>
                             <span>${order.total.toFixed(2)}</span>
+                            {(() => {
+                              const tracking = getOrderTracking(order.id)
+                              return tracking?.trackingNumber && (
+                                <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                                  {tracking.trackingNumber}
+                                </span>
+                              )
+                            })()}
                           </CardDescription>
                         </div>
                         <div className="flex gap-2">

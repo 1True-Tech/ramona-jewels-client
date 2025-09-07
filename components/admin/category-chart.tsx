@@ -3,38 +3,9 @@
 import { useState, useMemo } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useGetCategoryPerformanceQuery } from "@/store/api/analyticsApi"
 
-// Mock sales data for 3 years (same as yours)
-const salesData = [
-  { category: "Floral", value: 150, date: "2023-01-05" },
-  { category: "Oriental", value: 90, date: "2023-01-12" },
-  { category: "Woody", value: 120, date: "2023-02-03" },
-  { category: "Citrus", value: 70, date: "2023-03-18" },
-  { category: "Aquatic", value: 50, date: "2023-03-22" },
-  { category: "Floral", value: 200, date: "2023-07-10" },
-  { category: "Woody", value: 140, date: "2023-10-14" },
-  { category: "Oriental", value: 110, date: "2023-12-25" },
-
-  { category: "Floral", value: 130, date: "2024-01-08" },
-  { category: "Oriental", value: 85, date: "2024-02-15" },
-  { category: "Woody", value: 95, date: "2024-02-27" },
-  { category: "Citrus", value: 60, date: "2024-03-05" },
-  { category: "Aquatic", value: 30, date: "2024-05-19" },
-  { category: "Floral", value: 220, date: "2024-07-22" },
-  { category: "Woody", value: 160, date: "2024-09-03" },
-  { category: "Oriental", value: 100, date: "2024-12-12" },
-
-  { category: "Floral", value: 120, date: "2025-01-10" },
-  { category: "Floral", value: 80, date: "2025-02-14" },
-  { category: "Oriental", value: 60, date: "2025-01-20" },
-  { category: "Woody", value: 100, date: "2025-02-05" },
-  { category: "Citrus", value: 40, date: "2025-02-25" },
-  { category: "Aquatic", value: 20, date: "2025-03-01" },
-  { category: "Floral", value: 180, date: "2025-07-18" },
-  { category: "Woody", value: 150, date: "2025-10-09" },
-  { category: "Oriental", value: 90, date: "2025-12-30" },
-]
-
+// Category color palette
 const categoryColors: Record<string, string> = {
   Floral: "#8B5CF6",
   Oriental: "#EC4899",
@@ -43,7 +14,7 @@ const categoryColors: Record<string, string> = {
   Aquatic: "#3B82F6",
 }
 
-// Array for months (1-based)
+// Array for months (0-based for Date API)
 const months = [
   { value: 0, label: "January" },
   { value: 1, label: "February" },
@@ -60,73 +31,41 @@ const months = [
 ]
 
 export function CategoryChart() {
-  // Get unique years from data dynamically
+  // Build years list: current year and 2 previous years
   const uniqueYears = useMemo(() => {
-    const years = Array.from(
-      new Set(salesData.map((item) => new Date(item.date).getFullYear()))
-    ).sort((a, b) => b - a) // descending order
-    return years.map(String)
+    const y = new Date().getFullYear()
+    return [y, y - 1, y - 2].map(String)
   }, [])
 
-  const [selectedYear, setSelectedYear] = useState(uniqueYears[0] || "2025")
+  const [selectedYear, setSelectedYear] = useState(uniqueYears[0] || String(new Date().getFullYear()))
   const [reportType, setReportType] = useState("yearly")
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()) // 0-based
 
-  const chartData = useMemo(() => {
-    const now = new Date()
-
-    // Compute start and end of current week (Monday - Sunday)
-    const getWeekRange = (date: Date) => {
-      const day = date.getDay()
-      // Adjust Sunday (0) to 7 for easier calculation Monday=1 ... Sunday=7
-      const adjustedDay = day === 0 ? 7 : day
-      const monday = new Date(date)
-      monday.setDate(date.getDate() - adjustedDay + 1)
-      const sunday = new Date(monday)
-      sunday.setDate(monday.getDate() + 6)
-      // Zero out time for safe comparisons
-      monday.setHours(0, 0, 0, 0)
-      sunday.setHours(23, 59, 59, 999)
-      return [monday, sunday]
-    }
-
-    const [weekStart, weekEnd] = getWeekRange(now)
-    const todayStr = now.toDateString()
-
-    // Filter data by selectedYear first
-    let filtered = salesData.filter(
-      (item) => new Date(item.date).getFullYear().toString() === selectedYear
-    )
-
+  // Compute date range based on filters
+  const { startDate, endDate } = useMemo(() => {
+    const year = parseInt(selectedYear, 10)
     if (reportType === "monthly") {
-      // Filter by selectedMonth as well
-      filtered = filtered.filter(
-        (item) => new Date(item.date).getMonth() === selectedMonth
-      )
-    } else if (reportType === "weekly") {
-      filtered = filtered.filter((item) => {
-        const date = new Date(item.date)
-        return date >= weekStart && date <= weekEnd
-      })
-    } else if (reportType === "daily") {
-      filtered = filtered.filter((item) => {
-        const date = new Date(item.date)
-        return date.toDateString() === todayStr
-      })
+      const start = new Date(year, selectedMonth, 1)
+      const end = new Date(year, selectedMonth + 1, 0)
+      return { startDate: start.toISOString(), endDate: end.toISOString() }
     }
-
-    // Group by category and sum values
-    const grouped: Record<string, number> = {}
-    filtered.forEach((item) => {
-      grouped[item.category] = (grouped[item.category] || 0) + item.value
-    })
-
-    return Object.entries(grouped).map(([name, value]) => ({
-      name,
-      value,
-      color: categoryColors[name],
-    }))
+    // yearly
+    const start = new Date(year, 0, 1)
+    const end = new Date(year, 11, 31, 23, 59, 59, 999)
+    return { startDate: start.toISOString(), endDate: end.toISOString() }
   }, [selectedYear, reportType, selectedMonth])
+
+  // Fetch category performance from backend
+  const { data, isLoading } = useGetCategoryPerformanceQuery({ startDate, endDate })
+
+  const chartData = useMemo(() => {
+    const list = data?.data ?? []
+    return list.map((item) => ({
+      name: item.category,
+      value: item.totalSold,
+      color: categoryColors[item.category] ?? "#8884d8",
+    }))
+  }, [data])
 
   return (
     <div className="bg-card rounded-lg border px-3 md:px-4 py-6">
@@ -176,8 +115,6 @@ export function CategoryChart() {
             <SelectContent className="bg-white">
               <SelectItem value="yearly">Yearly</SelectItem>
               <SelectItem value="monthly">Monthly</SelectItem>
-              {/* <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="daily">Daily</SelectItem> */}
             </SelectContent>
           </Select>
         </div>
@@ -203,6 +140,10 @@ export function CategoryChart() {
           <Legend />
         </PieChart>
       </ResponsiveContainer>
+
+      {isLoading && (
+        <div className="text-sm text-muted-foreground mt-2">Loading category performance...</div>
+      )}
     </div>
   )
 }

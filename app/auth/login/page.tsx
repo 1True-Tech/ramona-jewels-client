@@ -1,59 +1,44 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Eye, EyeOff, Store, Mail, Lock } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
-
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-})
-
-type LoginForm = z.infer<typeof loginSchema>
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Store } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { useLoginMutation } from '@/store/api/authApi'
+import { useAppDispatch } from '@/store/hooks'
+import { showModal } from '@/store/slices/uiSlice'
+import { Separator } from '@radix-ui/react-select'
 
 export default function LoginPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
-  const { toast } = useToast()
+  const [login, { isLoading }] = useLoginMutation()
   const router = useRouter()
+  const dispatch = useAppDispatch()
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-  })
-
-  const onSubmit = async (data: LoginForm) => {
-    setIsLoading(true)
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
     try {
-      await login(data.email, data.password)
-      toast({
-        title: "Welcome back!",
-        description: "You have been successfully logged in.",
-      })
-      router.push("/")
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        // variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+      const result = await login({ email, password }).unwrap()
+      
+      if (result.success) {
+        dispatch(showModal({
+          type: 'success',
+          title: 'Welcome Back!',
+          message: 'You have been successfully logged in.'
+        }))
+        router.push('/')
+      }
+    } catch (error: any) {
+      // Error handling is now done by the baseQueryWithReauth wrapper
+      console.error('Login failed:', error)
     }
   }
 
@@ -62,30 +47,13 @@ export default function LoginPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
         <div className="bg-card rounded-lg border shadow-lg p-8">
           {/* Header */}
-          <div className="text-center mb-8">
-            <Link href="/" className="inline-flex items-center space-x-2 mb-4">
-              <Store className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">ModernShop</span>
-            </Link>
+          <div className="text-center mb-8 mt-10">
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <p className="text-muted-foreground">Sign in to your account</p>
           </div>
 
-          {/* Demo Credentials */}
-          <div className="bg-muted/50 rounded-lg p-4 mb-6">
-            <p className="text-sm font-medium mb-2">Demo Credentials:</p>
-            <div className="text-xs space-y-1">
-              <p>
-                <strong>Admin:</strong> admin@example.com / admin123
-              </p>
-              <p>
-                <strong>User:</strong> user@example.com / user123
-              </p>
-            </div>
-          </div>
-
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -95,10 +63,11 @@ export default function LoginPage() {
                   type="email"
                   placeholder="Enter your email"
                   className="pl-10"
-                  {...register("email")}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -110,7 +79,9 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   className="pl-10 pr-10"
-                  {...register("password")}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
                 <Button
                   type="button"
@@ -122,7 +93,6 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
 
             <div className="flex items-center justify-between">

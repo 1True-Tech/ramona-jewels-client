@@ -4,14 +4,68 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Star, Sparkles, Gem, Crown } from "lucide-react"
+import { ArrowRight, Star, Sparkles, Gem, Crown, Snowflake, Gift } from "lucide-react"
+import { MobileHero } from "./MobileHero"
+import { useMemo } from "react"
+
+
 
 export function HeroSection() {
-  return (
-    <section className="relative overflow-hidden bg-gradient-hero h-screen">
-      <div className="absolute inset-0 bg-[url('/images/TestImage.jpg')] opacity-5"></div>
+  const isChristmas = useMemo(() => {
+    const today = new Date()
+    const month = today.getMonth() // 0 = Jan, 11 = Dec
+    return month >= 7 && month <= 11; // October to December
+  }, [])
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 relative">
+  return (
+    <section className="relative bg-gradient-hero lg:h-screen overflow-hidden rounded-b-4xl lg:rounded-b-none">
+      {isChristmas ? (
+      /* 🎄 Christmas Frame */
+        <div className="absolute inset-0 rounded-b-3xl lg:rounded-b-none p-[6px] overflow-hidden
+            bg-[conic-gradient(from_45deg,#e11d48_0_25%,#ffffff_0_50%,#e11d48_0_75%,#ffffff_0_100%)]
+            [background-size:22px_22px] shadow-lg">
+
+            {/* Inner panel (the actual hero background) */}
+            <div className="absolute inset-0 rounded-b-[1.35rem] lg:rounded-b-none overflow-hidden">
+              {/* Festive gradient base */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-800 via-emerald-600 to-red-700" />
+
+              {/* Soft vignette + inner glow */}
+              <div className="absolute inset-0 shadow-[inset_0_0_60px_rgba(0,0,0,0.35)]" />
+              <div className="absolute inset-0 ring-1 ring-white/15" />
+
+              {/* Snow overlay (two staggered dot grids) */}
+              <div className="absolute inset-0 opacity-70 pointer-events-none
+              [background-image:radial-gradient(#ffffff_1px,transparent_1px),radial-gradient(#ffffff_1px,transparent_1px)]
+              [background-size:22px_22px,30px_30px]
+              [background-position:0_0,11px_15px]" />
+
+              {/* Optional corner ornaments (SVG snowflakes) */}
+              <Snowflake className="absolute top-3 left-13 h-16 w-16 opacity-90 text-white" />
+              <Snowflake className="absolute top-3 right-40 h-6 w-6 opacity-90 text-white"/>
+              <svg className="absolute top-3 left-3 h-16 w-16 opacity-90" viewBox="0 0 54 54" fill="none" stroke="white" strokeWidth="1.5">
+              <path d="M12 2v20M4.93 4.93l14.14 14.14M2 12h20M4.93 19.07L19.07 4.93" strokeLinecap="round"/>
+            </svg>
+
+            <Gift className="absolute top-12 lg:top-3 right-14 h-16 w-16 text-white" />
+            
+            <Gift className="absolute bottom-3 left-13 h-16 w-16 opacity-90 text-white " />
+
+            <Snowflake className="absolute bottom-3 right-3 h-46 w-46 rotate-45 text-white" />
+            <Snowflake className="absolute bottom-3 left-13 h-6 w-6 opacity-50 rotate-45 text-white" />
+            
+            <svg className="absolute bottom-3 right-3 h-6 w-6 opacity-90 rotate-45" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5">
+            <path d="M12 2v20M4.93 4.93l14.14 14.14M2 12h20M4.93 19.07L19.07 4.93" strokeLinecap="round"/>
+            </svg>
+            </div>
+        </div>
+      ) :
+        (<div className="absolute inset-0 bg-[url('/images/TestImage.jpg')] opacity-5"></div>)
+      }
+
+      <MobileHero isChristmas={isChristmas}/>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 relative hidden lg:block">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <motion.div
@@ -32,7 +86,7 @@ export function HeroSection() {
                     <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground">Trusted by luxury connoisseurs worldwide</span>
+                <span className={`text-sm ${isChristmas ? "text-white" : "text-muted-foreground"}`}>Trusted by luxury connoisseurs worldwide</span>
               </motion.div>
 
               <motion.h1
@@ -49,7 +103,7 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-lg text-muted-foreground max-w-md leading-relaxed"
+                className={`text-lg max-w-md leading-relaxed ${isChristmas ? "text-white" : "text-muted-foreground"}`}
               >
                 Discover our curated collection of fine jewelry and luxury fragrances. Each piece tells a story of
                 craftsmanship, elegance, and timeless beauty.
@@ -73,7 +127,7 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Link href="/perfumes">
-                <Button variant="outline" size="lg" className="bg-transparent border-primary/20 hover:bg-primary/5">
+                <Button variant="outline" size="lg" className={`bg-transparent ${isChristmas ? "text-black border-2 border-black" : "text-black border-primary/20 hover:bg-primary/5"}`}>
                   <Sparkles className="mr-2 h-4 w-4" />
                   Shop Fragrances
                 </Button>
@@ -84,7 +138,7 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="flex items-center space-x-8 text-sm text-muted-foreground"
+              className={`flex items-center space-x-8 text-sm ${isChristmas ? "text-white" : "text-muted-foreground"}`}
             >
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>

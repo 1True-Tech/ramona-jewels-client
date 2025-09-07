@@ -26,7 +26,9 @@ import {
 } from "lucide-react"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
-import { useToast } from "@/hooks/use-toast"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
+import { OrderTracking } from "@/components/orders/order-tracking"
 
 interface Order {
   id: string
@@ -46,7 +48,7 @@ interface Order {
 export default function OrderDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const { toast } = useToast()
+  const dispatch = useAppDispatch()
   const orderId = params.id as string
   
   const [order, setOrder] = useState<Order | null>(null)
@@ -82,17 +84,18 @@ export default function OrderDetailPage() {
     try {
       await navigator.clipboard.writeText(order.id)
       setCopied(true)
-      toast({
-        title: "Copied!",
-        description: "Order ID copied to clipboard",
-      })
+      dispatch(showModal({
+        type: 'success',
+        title: 'Copied!',
+        message: 'Order ID copied to clipboard'
+      }))
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      toast({
-        title: "Failed to copy",
-        description: "Could not copy order ID to clipboard",
-        // variant: "destructive"
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Failed to copy',
+        message: 'Could not copy order ID to clipboard'
+      }))
     }
   }
 
@@ -353,6 +356,15 @@ export default function OrderDetailPage() {
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
+
+            {/* Order Tracking */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <OrderTracking orderId={order.id} />
             </motion.div>
           </div>
 

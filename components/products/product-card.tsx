@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
 import { useWishlist } from "@/contexts/wishlist-context"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export interface Product {
@@ -42,7 +42,7 @@ export function ProductCard({ product }: ProductCardProps) {
       toast({
         title: "Login required",
         description: "Please log in to add items to your cart.",
-        // variant: "destructive",
+        variant: "destructive",
       })
       return
     }
@@ -56,6 +56,7 @@ export function ProductCard({ product }: ProductCardProps) {
     toast({
       title: "Added to cart",
       description: `${product.name} has been added to your cart.`,
+      variant: "success",
     })
   }
 
@@ -66,7 +67,7 @@ export function ProductCard({ product }: ProductCardProps) {
       toast({
         title: "Login required",
         description: "Please log in to add items to your wishlist.",
-        // variant: "destructive",
+        variant: "destructive",
       })
       return
     }
@@ -78,6 +79,7 @@ export function ProductCard({ product }: ProductCardProps) {
       toast({
         title: "Removed from wishlist",
         description: `${product.name} has been removed from your wishlist.`,
+        variant: "info",
       })
     } else {
       addToWishlist({
@@ -91,6 +93,7 @@ export function ProductCard({ product }: ProductCardProps) {
       toast({
         title: "Added to wishlist",
         description: `${product.name} has been added to your wishlist.`,
+        variant: "success",
       })
     }
   }

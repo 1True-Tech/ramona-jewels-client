@@ -30,8 +30,9 @@ import {
   Shield
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/redux-auth-context"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 
@@ -71,7 +72,7 @@ const steps = [
 export default function CheckoutPage() {
   const { state, clearCart } = useCart()
   const { user } = useAuth()
-  const { toast } = useToast()
+  const dispatch = useAppDispatch()
   const router = useRouter()
   
   const [currentStep, setCurrentStep] = useState(1)
@@ -126,11 +127,11 @@ export default function CheckoutPage() {
     const isValid = requiredFields.every(field => shippingInfo[field as keyof ShippingInfo])
     
     if (!isValid) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required shipping fields.",
-        // variant: "destructive"
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Missing Information',
+        message: 'Please fill in all required shipping fields.'
+      }))
       return
     }
     
@@ -140,11 +141,11 @@ export default function CheckoutPage() {
   const handlePaymentSubmit = () => {
     // Validate payment form
     if (!paymentInfo.cardNumber || !paymentInfo.expiryDate || !paymentInfo.cvv || !paymentInfo.cardholderName) {
-      toast({
-        title: "Missing Payment Information",
-        description: "Please fill in all payment details.",
-        // variant: "destructive"
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Missing Payment Information',
+        message: 'Please fill in all payment details.'
+      }))
       return
     }
     
@@ -184,20 +185,21 @@ export default function CheckoutPage() {
       const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]')
       localStorage.setItem('orders', JSON.stringify([...existingOrders, order]))
       
-      toast({
-        title: "Order Placed Successfully!",
-        description: `Your order ${order.id} has been confirmed.`,
-      })
+      dispatch(showModal({
+        type: 'success',
+        title: 'Order Placed Successfully!',
+        message: `Your order ${order.id} has been confirmed.`
+      }))
       
       // Redirect to order confirmation
       router.push(`/checkout/success?orderId=${order.id}`)
       
     } catch (error) {
-      toast({
-        title: "Payment Failed",
-        description: "There was an error processing your payment. Please try again.",
-        // variant: "destructive"
-      })
+      dispatch(showModal({
+        type: 'error',
+        title: 'Payment Failed',
+        message: 'There was an error processing your payment. Please try again.'
+      }))
     } finally {
       setIsLoading(false)
     }

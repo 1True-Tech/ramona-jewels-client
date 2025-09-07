@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { AdminLayout } from "@/components/admin/admin-layout"
@@ -8,33 +8,75 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, TrendingUp, Gem, Sparkles } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
-import { allProducts } from "@/lib/product-data"
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, TrendingUp, Gem, Sparkles, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/redux-auth-context"
+import { useAppDispatch } from "@/store/hooks"
+import { showModal } from "@/store/slices/uiSlice"
+import { useGetProductsQuery, useUpdateProductStockMutation, useDeleteProductMutation, useToggleProductStatusMutation } from "@/store/api/productsApi"
 import Image from "next/image"
+import Link from "next/link"
+import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 
 export default function AdminInventoryPage() {
-  const { user } = useAuth()
+  const { user, hydrated } = useAuth()
   const router = useRouter()
-  const { toast } = useToast()
-  const [products, setProducts] = useState(allProducts)
+  const dispatch = useAppDispatch()
+  
+  // RTK Query hooks
+  const { data: productsResponse, isLoading, error } = useGetProductsQuery()
+  const products = productsResponse?.data || []
+  const [updateProductStock] = useUpdateProductStockMutation()
+  const [deleteProduct] = useDeleteProductMutation()
+  const [toggleProductStatus] = useToggleProductStatusMutation()
+  const { data: productTypesRes } = useGetProductTypesQuery()
+  const productTypes = productTypesRes?.data ?? []
+  const { data: categoriesRes } = useGetCategoriesQuery()
+  const categories = categoriesRes?.data ?? []
+  
+  // Build maps to derive product type from category when product.type is absent
+  const productTypesById = useMemo(() => {
+    const map = new Map<string, any>()
+    for (const pt of productTypes) map.set(pt._id, pt)
+    return map
+  }, [productTypes])
+
+  const categoryToProductTypeName = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories) {
+      const pt = productTypesById.get(c.productType)
+      if (pt?.name) map.set((c.name ?? '').toLowerCase(), pt.name)
+    }
+    return map
+  }, [categories, productTypesById])
+
+  const getTypeNameForProduct = (p: any): string | undefined => {
+    const direct = (p?.type ?? '').trim()
+    if (direct) return direct
+    const cat = (p?.category ?? '').toLowerCase()
+    return categoryToProductTypeName.get(cat)
+  }
+
+  // Local state for filters
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedType, setSelectedType] = useState<"all" | "jewelry" | "perfume">("all")
+  const [selectedType, setSelectedType] = useState<string>("all")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all")
-  const [filteredProducts, setFilteredProducts] = useState(allProducts)
-  const [editingProduct, setEditingProduct] = useState<any>(null)
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
       router.push("/auth/login")
     }
   }, [user, router])
-
   useEffect(() => {
+    if (!hydrated) return
+    if (!user || user.role !== "admin") {
+      router.push("/auth/login")
+    }
+  }, [hydrated, user, router])
+
+  // Memoized filtered products
+  const filteredProducts = useMemo(() => {
     let filtered = products
 
     // Filter by search query
@@ -42,14 +84,15 @@ export default function AdminInventoryPage() {
       filtered = filtered.filter(
         (product) =>
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchQuery.toLowerCase()),
+          product.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.category?.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     }
 
     // Filter by type
     if (selectedType !== "all") {
-      filtered = filtered.filter((product) => product.type === selectedType)
+      const st = selectedType.toLowerCase()
+      filtered = filtered.filter((product) => (getTypeNameForProduct(product) ?? "").toLowerCase() === st)
     }
 
     // Filter by category
@@ -59,36 +102,99 @@ export default function AdminInventoryPage() {
 
     // Filter by stock status
     if (stockFilter === "low") {
-      filtered = filtered.filter((product) => product.stockCount <= 10 && product.stockCount > 0)
+      filtered = filtered.filter((product) => product.stock <= 10 && product.stock > 0)
     } else if (stockFilter === "out") {
-      filtered = filtered.filter((product) => product.stockCount === 0)
+      filtered = filtered.filter((product) => product.stock === 0)
     }
 
-    setFilteredProducts(filtered)
-  }, [searchQuery, selectedType, selectedCategory, stockFilter, products])
+    return filtered
+  }, [products, searchQuery, selectedType, selectedCategory, stockFilter, getTypeNameForProduct])
 
-  const handleUpdateStock = (productId: string, newStock: number) => {
-    setProducts(products.map((p) => (p.id === productId ? { ...p, stockCount: newStock, inStock: newStock > 0 } : p)))
-    toast({
-      title: "Stock updated",
-      description: "Product stock has been updated successfully.",
-    })
+  const handleUpdateStock = async (productId: string, newStock: number) => {
+    try {
+      await updateProductStock({ id: productId, stock: newStock }).unwrap()
+      dispatch(showModal({
+        type: 'success',
+        title: 'Stock updated',
+        message: 'Product stock has been updated successfully.'
+      }))
+    } catch (error) {
+      dispatch(showModal({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to update product stock.'
+      }))
+    }
   }
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(products.filter((p) => p.id !== productId))
-    toast({
-      title: "Product deleted",
-      description: "Product has been removed from inventory.",
-    })
+  const handleDeleteProduct = async (productId: string, productName: string) => {
+    try {
+      await deleteProduct(productId).unwrap()
+      dispatch(showModal({
+        type: 'success',
+        title: 'Product deleted',
+        message: `${productName} has been removed from inventory.`
+      }))
+    } catch (error) {
+      dispatch(showModal({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to delete product.'
+      }))
+    }
   }
 
-  const lowStockCount = products.filter((p) => p.stockCount <= 10 && p.stockCount > 0).length
-  const outOfStockCount = products.filter((p) => p.stockCount === 0).length
-  const totalValue = products.reduce((sum, p) => sum + p.price * p.stockCount, 0)
+  const handleToggleStatus = async (productId: string, currentStatus: boolean) => {
+    try {
+      await toggleProductStatus({ id: productId, inStock: !currentStatus }).unwrap()
+      dispatch(showModal({
+        type: 'success',
+        title: 'Status updated',
+        message: `Product ${currentStatus ? 'deactivated' : 'activated'} successfully.`
+      }))
+    } catch (error) {
+      dispatch(showModal({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to update product status.'
+      }))
+    }
+  }
+
+  // Calculate stats
+  const lowStockCount = products.filter((p) => p.stock <= 10 && p.stock > 0).length
+  const outOfStockCount = products.filter((p) => p.stock === 0).length
+  const totalValue = products.reduce((sum, p) => sum + p.price * p.stock, 0)
 
   if (!user || user.role !== "admin") {
     return null
+  }
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading inventory...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-4" />
+            <p className="text-destructive mb-2">Failed to load inventory</p>
+            <p className="text-muted-foreground">Please try refreshing the page</p>
+          </div>
+        </div>
+      </AdminLayout>
+    )
   }
 
   return (
@@ -101,10 +207,12 @@ export default function AdminInventoryPage() {
               <h1 className="text-3xl font-bold font-playfair gradient-text">Inventory Management</h1>
               <p className="text-muted-foreground">Manage your jewelry and perfume inventory</p>
             </div>
-            <Button className="gradient-primary text-white border-0 hover:opacity-90">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
+            <Link href="/admin/inventory/add">
+              <Button className="gradient-primary text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </Link>
           </div>
         </motion.div>
 
@@ -113,8 +221,8 @@ export default function AdminInventoryPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6"
         >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-card rounded-lg border border-primary/20 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -153,6 +261,7 @@ export default function AdminInventoryPage() {
               </div>
               <TrendingUp className="h-8 w-8 text-primary" />
             </div>
+            </div>
           </div>
         </motion.div>
 
@@ -161,8 +270,8 @@ export default function AdminInventoryPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-col sm:flex-row gap-4"
         >
+          <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -180,18 +289,18 @@ export default function AdminInventoryPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Products</SelectItem>
-              <SelectItem value="jewelry">
-                <div className="flex items-center">
-                  <Gem className="h-4 w-4 mr-2" />
-                  Jewelry
-                </div>
-              </SelectItem>
-              <SelectItem value="perfume">
-                <div className="flex items-center">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Perfumes
-                </div>
-              </SelectItem>
+              {productTypes.map((t) => (
+                <SelectItem key={t._id} value={t.name}>
+                  <div className="flex items-center">
+                    {t.icon ? (
+                      <span className="mr-2">{t.icon}</span>
+                    ) : (
+                      <Package className="h-4 w-4 mr-2" />
+                    )}
+                    {t.name?.charAt(0).toUpperCase() + (t.name?.slice(1) ?? "")}
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -204,7 +313,8 @@ export default function AdminInventoryPage() {
               <SelectItem value="low">Low Stock (≤10)</SelectItem>
               <SelectItem value="out">Out of Stock</SelectItem>
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         </motion.div>
 
         {/* Products Table */}
@@ -212,8 +322,8 @@ export default function AdminInventoryPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-card rounded-lg border border-primary/20"
         >
+          <div className="bg-card rounded-lg border border-primary/20">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Inventory Items</h2>
@@ -236,18 +346,15 @@ export default function AdminInventoryPage() {
                 </thead>
                 <tbody>
                   {filteredProducts.map((product, index) => (
-                    <motion.tr
-                      key={product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                    <tr
+                      key={product._id}
                       className="border-b border-amber-300 hover:bg-muted/50"
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <div className="relative min-w-9 h-9 rounded-lg overflow-hidden bg-muted jewelry-sparkle">
                             <Image
-                              src={product.image || "/placeholder.svg"}
+                              src={product.images?.[0] || "/placeholder.svg"}
                               alt={product.name}
                               fill
                               className="object-cover"
@@ -255,26 +362,31 @@ export default function AdminInventoryPage() {
                           </div>
                           <div>
                             <p className="font-medium whitespace-nowrap">{product.name}</p>
-                            <p className="text-sm text-muted-foreground">{product.brand}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">{product.brand || 'No brand'}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <Badge variant="outline" className="border-primary/20">
-                          {product.type === "jewelry" ? (
-                            <>
-                              <Gem className="h-3 w-3 mr-1" />
-                              Jewelry
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              Perfume
-                            </>
-                          )}
+                          {(() => {
+                            const ptName = getTypeNameForProduct(product)
+                            const t = productTypes.find((pt) => (pt.name ?? '').toLowerCase() === (ptName ?? '').toLowerCase())
+                            const baseLabel = ptName && ptName.length > 0 ? ptName : (product.type ? product.type : "Unknown")
+                            const label = baseLabel.charAt(0).toUpperCase() + baseLabel.slice(1)
+                            return (
+                              <>
+                                {t?.icon ? (
+                                  <span className="mr-1">{t.icon}</span>
+                                ) : (
+                                  <Package className="h-3 w-3 mr-1" />
+                                )}
+                                {label}
+                              </>
+                            )
+                          })()}
                         </Badge>
                       </td>
-                      <td className="py-4 px-4 text-sm capitalize">{product.category}</td>
+                      <td className="py-4 px-4 text-sm capitalize">{product.category || 'Uncategorized'}</td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">${product.price}</span>
@@ -287,8 +399,8 @@ export default function AdminInventoryPage() {
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
-                            value={product.stockCount}
-                            onChange={(e) => handleUpdateStock(product.id, Number.parseInt(e.target.value) || 0)}
+                            value={product.stock}
+                            onChange={(e) => handleUpdateStock(product._id, Number.parseInt(e.target.value) || 0)}
                             className="w-20 h-8 text-center border-primary/20"
                             min="0"
                           />
@@ -296,134 +408,82 @@ export default function AdminInventoryPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <Badge
-                          variant={
-                            product.stockCount === 0
-                              ? "destructive"
-                              : product.stockCount <= 10
-                                ? "secondary"
-                                : "default"
-                          }
-                          className={
-                            product.stockCount === 0
-                              ? ""
-                              : product.stockCount <= 10
-                                ? "bg-orange-100 text-orange-800 border-orange-200"
-                                : "bg-green-100 text-green-800 border-green-200"
-                          }
-                        >
-                          {product.stockCount === 0
-                            ? "Out of Stock"
-                            : product.stockCount <= 10
-                              ? "Low Stock"
-                              : "In Stock"}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge
+                            variant={
+                              product.stock === 0
+                                ? "destructive"
+                                : product.stock <= 10
+                                  ? "secondary"
+                                  : "default"
+                            }
+                            className={
+                              product.stock === 0
+                                ? ""
+                                : product.stock <= 10
+                                  ? "bg-orange-100 text-orange-800 border-orange-200"
+                                  : "bg-green-100 text-green-800 border-green-200"
+                            }
+                          >
+                            {product.stock === 0
+                              ? "Out of Stock"
+                              : product.stock <= 10
+                                ? "Low Stock"
+                                : "In Stock"}
+                          </Badge>
+                          <Badge
+                            variant={product.isActive ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {product.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
                       </td>
                       <td className="py-4 px-4">
                         <span className="font-medium gradient-text">
-                          ${(product.price * product.stockCount).toLocaleString()}
+                          ${(product.price * product.stock).toLocaleString()}
                         </span>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hover:bg-primary/10"
-                                onClick={() => setEditingProduct(product)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>Edit Product</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="stock">Stock Quantity</Label>
-                                  <Input
-                                    id="stock"
-                                    type="number"
-                                    value={editingProduct?.stockCount || 0}
-                                    onChange={(e) =>
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        stockCount: Number.parseInt(e.target.value) || 0,
-                                      })
-                                    }
-                                    className="border-primary/20"
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="price">Price</Label>
-                                  <Input
-                                    id="price"
-                                    type="number"
-                                    step="0.01"
-                                    value={editingProduct?.price || 0}
-                                    onChange={(e) =>
-                                      setEditingProduct({
-                                        ...editingProduct,
-                                        price: Number.parseFloat(e.target.value) || 0,
-                                      })
-                                    }
-                                    className="border-primary/20"
-                                  />
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    onClick={() => {
-                                      if (editingProduct) {
-                                        setProducts(
-                                          products.map((p) =>
-                                            p.id === editingProduct.id
-                                              ? {
-                                                  ...p,
-                                                  stockCount: editingProduct.stockCount,
-                                                  price: editingProduct.price,
-                                                  inStock: editingProduct.stockCount > 0,
-                                                }
-                                              : p,
-                                          ),
-                                        )
-                                        toast({
-                                          title: "Product updated",
-                                          description: "Product details have been updated successfully.",
-                                        })
-                                        setEditingProduct(null)
-                                      }
-                                    }}
-                                    className="gradient-primary text-white border-0 hover:opacity-90"
-                                  >
-                                    Save Changes
-                                  </Button>
-                                  <Button variant="outline" onClick={() => setEditingProduct(null)}>
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
+                          <Link href={`/products/${product._id}`}>
+                            <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Link href={`/admin/inventory/edit/${product._id}`}>
+                            <Button variant="ghost" size="icon">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteProduct(product.id)}
+                            onClick={() => handleToggleStatus(product._id, product.isActive)}
+                            className={product.isActive ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"}
+                            title={product.isActive ? "Deactivate product" : "Activate product"}
+                          >
+                            {product.isActive ? (
+                              <AlertTriangle className="h-4 w-4" />
+                            ) : (
+                              <Package className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteProduct(product._id, product.name)}
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
             </div>
           </div>
         </motion.div>

@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Gem, Sparkles } from "lucide-react"
 import { jewelryCategories, perfumeCategories } from "@/lib/product-data"
+import { useAuth } from "@/contexts/redux-auth-context"
 
 interface ProductFiltersProps {
   selectedCategory: string
@@ -28,20 +29,8 @@ const brands = [
   { id: "oriental-luxe", name: "Oriental Luxe", count: 15, type: "perfume" },
 ]
 
-const materials = [
-  { id: "18k-gold", name: "18K Gold", count: 45 },
-  { id: "platinum", name: "Platinum", count: 32 },
-  { id: "silver", name: "Sterling Silver", count: 28 },
-  { id: "rose-gold", name: "Rose Gold", count: 35 },
-]
-
-const gemstones = [
-  { id: "diamond", name: "Diamond", count: 56 },
-  { id: "sapphire", name: "Sapphire", count: 23 },
-  { id: "emerald", name: "Emerald", count: 18 },
-  { id: "ruby", name: "Ruby", count: 15 },
-  { id: "pearl", name: "Pearl", count: 12 },
-]
+// Materials and gemstones should come from backend data
+// Removed mock data arrays
 
 const ratings = [
   { stars: 5, count: 89 },
@@ -160,43 +149,7 @@ export function ProductFilters({
       {/* Jewelry-specific filters */}
       {(selectedType === "all" || selectedType === "jewelry") && (
         <>
-          <div>
-            <h3 className="font-semibold mb-4">Materials</h3>
-            <div className="space-y-2">
-              {materials.map((material) => (
-                <div key={material.id} className="flex items-center justify-between">
-                  <Label htmlFor={`material-${material.id}`} className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox id={`material-${material.id}`} />
-                    <span>{material.name}</span>
-                  </Label>
-                  <Badge variant="outline" className="text-xs">
-                    {material.count}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h3 className="font-semibold mb-4">Gemstones</h3>
-            <div className="space-y-2">
-              {gemstones.map((gemstone) => (
-                <div key={gemstone.id} className="flex items-center justify-between">
-                  <Label htmlFor={`gemstone-${gemstone.id}`} className="flex items-center space-x-2 cursor-pointer">
-                    <Checkbox id={`gemstone-${gemstone.id}`} />
-                    <span>{gemstone.name}</span>
-                  </Label>
-                  <Badge variant="outline" className="text-xs">
-                    {gemstone.count}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
+          {/* Materials and Gemstones filters removed - should come from backend */}
         </>
       )}
 

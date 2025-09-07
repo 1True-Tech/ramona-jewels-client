@@ -2,92 +2,62 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-
-type Product = {
-  id: string;
-  name: string;
-  sales: number;
-  revenue: number;
-  growth: number;
-};
-
-const mockPerfumes: Product[] = [
-  {
-    id: "p1",
-    name: "Floral Essence",
-    sales: 150,
-    revenue: 7500,
-    growth: 12,
-  },
-  {
-    id: "p2",
-    name: "Ocean Breeze",
-    sales: 200,
-    revenue: 9800,
-    growth: 18,
-  },
-  {
-    id: "p3",
-    name: "Citrus Splash",
-    sales: 130,
-    revenue: 6200,
-    growth: 9,
-  },
-  {
-    id: "p4",
-    name: "Mystic Oud",
-    sales: 90,
-    revenue: 5400,
-    growth: 15,
-  },
-  {
-    id: "p5",
-    name: "Vanilla Dream",
-    sales: 180,
-    revenue: 8700,
-    growth: 20,
-  },
-  // Add more if needed
-]
-
-// Use first product as initial value, so return type is always Product
-function getTopProductBySales(products: Product[]): Product {
-  return products.reduce(
-    (top, product) => (product.sales > top.sales ? product : top),
-    products[0]
-  )
-}
+import { useGetProductPerformanceQuery } from "@/store/api/analyticsApi"
 
 export function ProductAnalytics() {
-  const topProduct = getTopProductBySales(mockPerfumes)
+  const { data, isLoading } = useGetProductPerformanceQuery({})
+  const products = data?.data ?? []
 
-  const otherTopPerformers = [...mockPerfumes]
-    .filter(p => p.id !== topProduct.id)
-    .sort((a, b) => b.sales - a.sales)
-    .slice(0, 4) // next 4 top products
+  // Derive top product by totalSold
+  const topProduct = products.reduce((top, p) => {
+    const sales = p.totalSold ?? 0
+    if (!top) return { id: String(p.id), name: p.name, sales, revenue: p.totalRevenue ?? 0, growth: Math.min(99, Math.round((sales / 10))) }
+    const topSales = top.sales
+    return sales > topSales ? { id: String(p.id), name: p.name, sales, revenue: p.totalRevenue ?? 0, growth: Math.min(99, Math.round((sales / 10))) } : top
+  }, null as null | { id: string; name: string; sales: number; revenue: number; growth: number })
+
+  const otherTopPerformers = products
+    .filter(p => String(p.id) !== (topProduct?.id ?? ""))
+    .sort((a, b) => (b.totalSold ?? 0) - (a.totalSold ?? 0))
+    .slice(0, 4)
+    .map((p, idx) => ({
+      id: String(p.id),
+      name: p.name,
+      sales: p.totalSold ?? 0,
+      revenue: p.totalRevenue ?? 0,
+      growth: Math.min(99, Math.round(((p.totalSold ?? 0) / 10)))
+    }))
 
   return (
     <div className="bg-card rounded-lg border p-6">
       <h3 className="text-lg font-semibold mb-4 gradient-text">Top Performing Product</h3>
 
-      <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-100 mb-6">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-yellow-800">{topProduct.name}</span>
-            <Badge variant="destructive" className="text-xs bg-white text-amber-400">
-              #1 Top Product
-            </Badge>
-          </div>
-          <div className="text-sm text-muted-foreground mb-2">
-            {topProduct.sales} units sold • ${topProduct.revenue} revenue
-          </div>
-          <Progress value={topProduct.growth * 2} className="h-2" />
+      {!topProduct && (
+        <div className="text-sm text-muted-foreground mb-6">
+          {isLoading ? "Loading product performance..." : "No product performance data available."}
         </div>
-        <div className="text-right ml-4">
-          <div className="text-sm font-medium text-green-600">+{topProduct.growth}%</div>
-          <div className="text-xs text-muted-foreground">growth</div>
+      )}
+
+      {topProduct && (
+        <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-100 mb-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-yellow-800">{topProduct.name}</span>
+              <Badge variant="destructive" className="text-xs bg-white text-amber-400">
+                #1 Top Product
+              </Badge>
+            </div>
+            <div className="text-sm text-muted-foreground mb-2">
+              {topProduct.sales} units sold • ${topProduct.revenue} revenue
+            </div>
+            <Progress value={topProduct.growth * 2} className="h-2" />
+          </div>
+          <div className="text-right ml-4">
+            <div className="text-sm font-medium text-green-600">+{topProduct.growth}%</div>
+            <div className="text-xs text-muted-foreground">growth</div>
+          </div>
         </div>
-      </div>
+      )}
 
       <h3 className="text-lg font-semibold mb-4 gradient-text">Other Top Products</h3>
       <div className="space-y-4">
@@ -114,6 +84,12 @@ export function ProductAnalytics() {
             </div>
           </div>
         ))}
+        {isLoading && otherTopPerformers.length === 0 && (
+          <div className="text-sm text-muted-foreground">Loading product performance...</div>
+        )}
+        {!isLoading && otherTopPerformers.length === 0 && topProduct && (
+          <div className="text-sm text-muted-foreground">No additional top products.</div>
+        )}
       </div>
     </div>
   )
