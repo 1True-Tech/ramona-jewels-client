@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import {
   LayoutDashboard,
-  Package,
   Users,
   ShoppingCart,
   BarChart3,

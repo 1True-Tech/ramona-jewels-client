@@ -60,7 +60,7 @@ export default function AdminInventoryPage() {
   // Local state for filters
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedType, setSelectedType] = useState<string>("all")
-  const [selectedCategory, setSelectedCategory] = useState("")
+  const [selectedCategory] = useState("")
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all")
 
   useEffect(() => {

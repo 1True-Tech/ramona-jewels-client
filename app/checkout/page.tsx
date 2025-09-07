@@ -23,10 +23,7 @@ import {
   MapPin, 
   User, 
   Mail, 
-  Phone,
   Lock,
-  ShoppingBag,
-  Calendar,
   Shield
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"

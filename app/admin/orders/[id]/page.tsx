@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -121,8 +121,8 @@ const orderTimeline = [
 export default function AdminOrderDetailPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const params = useParams()
-  const [order, setOrder] = useState(mockOrder)
+  // removed unused: const params = useParams()
+  const [order] = useState(mockOrder)
 
   useEffect(() => {
     if (!user || user.role !== "admin") {

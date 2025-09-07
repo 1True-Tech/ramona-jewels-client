@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { useOrderTracking, TrackingEvent } from '@/contexts/order-tracking-context'
+import { useOrderTracking } from '@/contexts/order-tracking-context'
 import { useToast } from '@/hooks/use-toast'
 
 interface OrderTrackingProps {

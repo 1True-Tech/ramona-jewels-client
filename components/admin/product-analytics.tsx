@@ -20,7 +20,7 @@ export function ProductAnalytics() {
     .filter(p => String(p.id) !== (topProduct?.id ?? ""))
     .sort((a, b) => (b.totalSold ?? 0) - (a.totalSold ?? 0))
     .slice(0, 4)
-    .map((p, idx) => ({
+    .map((p) => ({
       id: String(p.id),
       name: p.name,
       sales: p.totalSold ?? 0,

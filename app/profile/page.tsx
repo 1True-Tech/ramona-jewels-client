@@ -29,14 +29,11 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { userApiService, UpdateProfileData, ChangePasswordData } from "@/lib/api/userApi"
-import { useAppDispatch } from "@/store/hooks"
-import { showModal } from "@/store/slices/uiSlice"
 import { 
   validateProfile, 
   validatePassword, 
   getFieldError, 
-  hasFieldError,
-  ValidationResult 
+  hasFieldError
 } from "@/lib/validations/profileValidation"
 import { UserProfile } from "../types"
 import { useRouter } from "next/navigation"
@@ -152,7 +149,7 @@ export default function ProfilePage() {
         return
       }
 
-      let updatedProfile = { ...profile }
+      const updatedProfile = { ...profile }
 
       // Handle avatar upload first if there's a selected file
       if (selectedFile) {
@@ -285,17 +282,6 @@ export default function ProfilePage() {
 
 
 
-  const handleCancelPreview = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview)
-    }
-    setImagePreview(null)
-    setSelectedFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
   const handleInputChange = (field: string, value: any) => {
     setProfile(prev => ({
       ...prev,
@@ -349,14 +335,14 @@ export default function ProfilePage() {
     }))
   }
 
+  // Back to previous route
+  const router = useRouter()
+
   if (isLoading) {
     return (
       <Loader message="Loading profile..." />
     )
   }
-
-  // Back to previous route
-  const router = useRouter()
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">

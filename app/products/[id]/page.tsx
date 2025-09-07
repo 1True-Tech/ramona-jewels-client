@@ -19,8 +19,6 @@ import {
   Minus,
   Sparkles,
   Gem,
-  Award,
-  Clock,
   Loader2,
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"

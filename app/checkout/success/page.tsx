@@ -16,7 +16,6 @@ import {
   Calendar, 
   Download, 
   Mail,
-  ArrowRight,
   Home,
   ShoppingBag,
   Loader
