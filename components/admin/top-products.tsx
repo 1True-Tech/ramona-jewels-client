@@ -4,9 +4,14 @@ import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Gem, Sparkles } from "lucide-react"
 import { useGetProductPerformanceQuery } from "@/store/api/analyticsApi"
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
+import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
+import { useMemo } from "react"
 
 export function TopProducts() {
   const { data, isLoading } = useGetProductPerformanceQuery({})
+  const { data: categoriesData } = useGetCategoriesQuery()
+  const { data: productTypesData } = useGetProductTypesQuery()
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
   const toImageUrl = (img?: string | null) => {
@@ -16,20 +21,43 @@ export function TopProducts() {
     return img
   }
 
-  const topProducts = (data?.data ?? []).map((p, index) => ({
-    id: String(p.id),
-    name: p.name,
-    image: toImageUrl(p.image || undefined),
-    category: p.category || "Unknown",
-    // Map backend fields to UI expectations
-    rank: index + 1,
-    sales: p.totalSold ?? 0,
-    price: Math.round((p.averagePrice ?? 0) * 100) / 100,
-    // UI-only synthetic trend values when not provided by backend
-    trend: "up" as const,
-    trendValue: Math.min(99, Math.max(5, Math.round((p.totalSold ?? 0) / 5))),
-    type: "perfume" as const,
-  }))
+  // Map productTypeId => productTypeName for quick lookup
+  const typeIdToName = useMemo(() => {
+    const map = new Map<string, string>()
+    const types = productTypesData?.data ?? []
+    types.forEach((t) => map.set(t._id, t.name))
+    return map
+  }, [productTypesData])
+
+  // Map category id and name => productTypeName
+  const categoryToTypeName = useMemo(() => {
+    const map = new Map<string, string>()
+    const cats = categoriesData?.data ?? []
+    cats.forEach((c) => {
+      const typeName = typeIdToName.get(c.productType) ?? c.productType ?? "Unknown"
+      map.set(c._id, typeName)
+      map.set(c.name, typeName)
+    })
+    return map
+  }, [categoriesData, typeIdToName])
+
+  const topProducts = (data?.data ?? []).map((p, index) => {
+    const resolvedType = categoryToTypeName.get(p.category) ?? "Unknown"
+    return {
+      id: String(p.id),
+      name: p.name,
+      image: toImageUrl(p.image || undefined),
+      category: p.category || "Unknown",
+      // Map backend fields to UI expectations
+      rank: index + 1,
+      sales: p.totalSold ?? 0,
+      price: Math.round((p.averagePrice ?? 0) * 100) / 100,
+      // UI-only synthetic trend values when not provided by backend
+      trend: "up" as const,
+      trendValue: Math.min(99, Math.max(5, Math.round((p.totalSold ?? 0) / 5))),
+      type: resolvedType,
+    }
+  })
 
   return (
     <div className="bg-card rounded-lg border p-6">
@@ -76,7 +104,7 @@ export function TopProducts() {
                 {/* Type */}
                 <td className="p-3">
                   <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    {product.type === "jewelry" ? (
+                    {product.type && product.type.toLowerCase() === "jewelry" ? (
                       <>
                         <Gem className="h-3 w-3" />
                         Jewelry
@@ -84,7 +112,7 @@ export function TopProducts() {
                     ) : (
                       <>
                         <Sparkles className="h-3 w-3" />
-                        Perfume
+                        {product.type || "Perfume"}
                       </>
                     )}
                   </Badge>
