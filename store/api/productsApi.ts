@@ -47,8 +47,14 @@ export const productsApi = createApi({
             searchParams.append(key, value.toString())
           }
         })
+
+        // Ensure we request a large page size by default so All Products shows everything
+        if (!(params as ProductQueryParams)?.limit && !searchParams.has('limit')) {
+          searchParams.set('limit', '1000')
+        }
         
-        return `?${searchParams.toString()}`
+        const qs = searchParams.toString()
+        return qs ? `?${qs}` : ''
       },
       providesTags: ['Products'],
       transformResponse: (response: any) => {
@@ -57,6 +63,13 @@ export const productsApi = createApi({
           const imagesArr = Array.isArray(item.images) && item.images.length
             ? item.images
             : (item.image ? [item.image] : [])
+          const categoryLower = String(item.category || '').toLowerCase()
+          const perfumeCats = new Set(['floral', 'aquatic', 'oriental', 'woody'])
+          const derivedType = (() => {
+            const t = item.type ? String(item.type).toLowerCase() : ''
+            if (t === 'perfume' || t === 'jewelry') return t
+            return perfumeCats.has(categoryLower) ? 'perfume' : 'jewelry'
+          })()
           return {
             _id: item._id,
             name: item.name,
@@ -70,7 +83,7 @@ export const productsApi = createApi({
             isActive: item.inStock ?? true,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
-            type: item.type,
+            type: derivedType,
           }
         }
 
@@ -94,6 +107,13 @@ export const productsApi = createApi({
         const imagesArr = Array.isArray(item.images) && item.images.length
           ? item.images
           : (item.image ? [item.image] : [])
+        const categoryLower = String(item.category || '').toLowerCase()
+        const perfumeCats = new Set(['floral', 'aquatic', 'oriental', 'woody'])
+        const derivedType = (() => {
+          const t = item.type ? String(item.type).toLowerCase() : ''
+          if (t === 'perfume' || t === 'jewelry') return t
+          return perfumeCats.has(categoryLower) ? 'perfume' : 'jewelry'
+        })()
         const mapped: Product = {
           _id: item._id,
           name: item.name,
@@ -107,7 +127,7 @@ export const productsApi = createApi({
           isActive: item.inStock ?? true,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
-          type: item.type,
+          type: derivedType,
         }
         return { success: true, data: mapped } as ProductResponse
       },

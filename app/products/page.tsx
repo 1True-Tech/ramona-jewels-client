@@ -78,7 +78,7 @@ export default function ProductsPage() {
     }
 
     if (selectedCategory) {
-      filtered = filtered.filter((product) => (product.category || "") === selectedCategory)
+      filtered = filtered.filter((product) => (product.category || "").toLowerCase() === selectedCategory.toLowerCase())
     }
 
     filtered = filtered.filter((product) => product.price >= priceRange[0] && product.price <= priceRange[1])
