@@ -2,7 +2,7 @@
 
 import { Provider } from 'react-redux'
 import { useEffect } from 'react'
-import { restoreAuth, updateLastActivity } from '@/store/slices/authSlice'
+import { restoreAuth } from '@/store/slices/authSlice'
 import { store } from '@/store'
 
 interface ReduxProviderProps {
@@ -13,17 +13,6 @@ function AuthRestorer() {
   useEffect(() => {
     // Restore authentication state from localStorage on app start
     store.dispatch(restoreAuth())
-    
-    // Set up activity tracking
-    const handleActivity = () => {
-      store.dispatch(updateLastActivity())
-    }
-    
-    // Track user activity for session management
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity, true)
-    })
     
     // Set up token expiry check
     const checkTokenExpiry = () => {
@@ -37,9 +26,6 @@ function AuthRestorer() {
     const tokenCheckInterval = setInterval(checkTokenExpiry, 60000)
     
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity, true)
-      })
       clearInterval(tokenCheckInterval)
     }
   }, [])
