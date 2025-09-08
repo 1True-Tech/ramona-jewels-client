@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Home, ShoppingCart, Heart, User, ShoppingBasket } from "lucide-react"
+import { Home, ShoppingCart, User, ShoppingBasket } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { useCart } from "@/contexts/cart-context"
