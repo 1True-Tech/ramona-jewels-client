@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Gem, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 // import { allProducts } from "@/lib/product-data";
 import { Product as UIProduct, ProductCard } from "../products/product-card";
 import { useGetProductsQuery } from "@/store/api/productsApi";
 import type { Product as ApiProduct } from "@/store/apiTypes";
+import { useGetProductTypesQuery } from "@/store/api/productTypesApi";
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
@@ -36,21 +38,33 @@ const toUIProduct = (p: ApiProduct): UIProduct => ({
 });
 
 export function FeaturedProducts() {
-  // keep current tabs for now; they only affect local filtering of the featured list
-  const [selectedCategory, setSelectedCategory] = useState<"All" | "Jewelry" | "Perfumes">("All");
   // Fetch 10 latest products from backend directly
   const { data } = useGetProductsQuery({ limit: 10, sort: "-createdAt" });
+  const { data: typesResp } = useGetProductTypesQuery();
 
-  const featured = useMemo(() => {
-    const items = (data?.data ?? []).slice();
-    return items.map(toUIProduct);
-  }, [data]);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | "all">("all");
 
-  const filteredProducts = useMemo(() => {
-    if (selectedCategory === "All") return featured;
-    const type = selectedCategory === "Jewelry" ? "jewelry" : "perfume";
-    return featured.filter((p) => (p.type?.toLowerCase?.() || "") === type);
-  }, [featured, selectedCategory]);
+  // Fetch categories for the selected type to filter products by category membership (like /products)
+  const { data: typeCategoriesResp } = useGetCategoriesQuery(
+    selectedTypeId === "all" ? undefined : { productType: selectedTypeId }
+  );
+
+  const typeCategoryNames = useMemo(
+    () => new Set((typeCategoriesResp?.data ?? []).map((c: any) => String(c.name))),
+    [typeCategoriesResp]
+  );
+
+  const productTypes = typesResp?.data ?? [];
+
+  const apiProducts: ApiProduct[] = useMemo(() => (data?.data ?? []), [data]);
+
+  const filteredApiProducts: ApiProduct[] = useMemo(() => {
+    if (selectedTypeId === "all") return apiProducts;
+    if (!typeCategoryNames.size) return [];
+    return apiProducts.filter((p) => typeCategoryNames.has(String(p.category)));
+  }, [apiProducts, selectedTypeId, typeCategoryNames]);
+
+  const displayedProducts: UIProduct[] = useMemo(() => filteredApiProducts.map(toUIProduct), [filteredApiProducts]);
 
   return (
     <section className="py-16 lg:py-24 px-[16px] md:px-6 lg:px-[5rem] xl:px-[8.5rem]">
@@ -72,7 +86,7 @@ export function FeaturedProducts() {
           </p>
         </motion.div>
 
-        {/* Category Tabs */}
+        {/* Type Filter Tabs (Dynamic like /products) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -80,40 +94,44 @@ export function FeaturedProducts() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="flex justify-center mb-12"
         >
-          <div className="flex items-center space-x-4 bg-gradient-to-r from-amber-50 to-orange-50 p-2 rounded-full border border-primary">
-            {(["All", "Jewelry", "Perfumes"] as const).map((category) => (
+          <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-orange-50 p-2 rounded-full border border-primary overflow-x-auto max-w-full">
+            <Button
+              variant={selectedTypeId === "all" ? "default" : "ghost"}
+              size="sm"
+              className={`rounded-full ${
+                selectedTypeId === "all" ? "gradient-primary text-white border-0" : "hover:bg-primary/10"
+              }`}
+              onClick={() => setSelectedTypeId("all")}
+            >
+              All Products
+            </Button>
+            {productTypes.map((t: any) => (
               <Button
-                key={category}
+                key={t._id}
+                variant={selectedTypeId === t._id ? "default" : "ghost"}
                 size="sm"
-                variant="ghost"
-                onClick={() => setSelectedCategory(category)}
-                className={`rounded-full w-[6.3rem] md:w-[7rem] ${
-                  selectedCategory === category
-                    ? "gradient-primary text-white border-0"
-                    : "hover:bg-primary/10"
+                className={`rounded-full ${
+                  selectedTypeId === t._id ? "gradient-primary text-white border-0" : "hover:bg-primary/10"
                 }`}
+                onClick={() => setSelectedTypeId(t._id)}
               >
-                {category === "Perfumes" ? (
-                  <Sparkles className="h-4 w-4 mr-2" />
-                ) : (
-                  <Gem className="h-4 w-4 mr-2" />
-                )}
-                {category}
+                {t.name}
               </Button>
             ))}
           </div>
         </motion.div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6 mb-12 justify-items-center">
           <AnimatePresence>
-            {filteredProducts.map((product, index) => (
+            {displayedProducts.map((product, index) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
+                className="w-full h-full"
               >
                 <ProductCard product={product} />
               </motion.div>

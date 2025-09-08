@@ -74,7 +74,7 @@ export function Navbar() {
           </div>
 
           {/* Right Side Icons */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 md:space-x-4">
             {/* Wishlist */}
             <Link href="/wishlist">
               <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">

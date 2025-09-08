@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Home, ShoppingCart, User, Gem, Sparkles } from "lucide-react"
+import { Home, ShoppingCart, Heart, User, ShoppingBasket } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { useCart } from "@/contexts/cart-context"
@@ -15,8 +15,7 @@ export function MobileNav() {
 
   const navigation = [
     { name: "Home", href: "/", icon: Home },
-    { name: "Jewelry", href: "/jewelry", icon: Gem },
-    { name: "Perfumes", href: "/perfumes", icon: Sparkles },
+    { name: "Products", href: "/products", icon: ShoppingBasket },
     { name: "Cart", href: "/cart", icon: ShoppingCart, badge: state.itemCount > 0 ? state.itemCount : null }, // Only show if > 0 },
     {
       name: "Profile",
@@ -26,8 +25,8 @@ export function MobileNav() {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-primary/20 lg:hidden">
-      <div className="grid grid-cols-5 h-16">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-primary/20 lg:hidden px-5">
+      <div className="grid grid-cols-4 h-16">
         {navigation.map((item) => {
           const isActive = pathname === item.href
           return (
