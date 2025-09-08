@@ -58,18 +58,11 @@ export const productsApi = createApi({
       },
       providesTags: ['Products'],
       transformResponse: (response: any) => {
-        // Map server Perfume fields to client Product shape
+        // Map server fields to client Product shape
         const mapItem = (item: any): Product => {
           const imagesArr = Array.isArray(item.images) && item.images.length
             ? item.images
             : (item.image ? [item.image] : [])
-          const categoryLower = String(item.category || '').toLowerCase()
-          const perfumeCats = new Set(['floral', 'aquatic', 'oriental', 'woody'])
-          const derivedType = (() => {
-            const t = item.type ? String(item.type).toLowerCase() : ''
-            if (t === 'perfume' || t === 'jewelry') return t
-            return perfumeCats.has(categoryLower) ? 'perfume' : 'jewelry'
-          })()
           return {
             _id: item._id,
             name: item.name,
@@ -83,7 +76,7 @@ export const productsApi = createApi({
             isActive: item.inStock ?? true,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
-            type: derivedType,
+            type: item.type,
           }
         }
 
@@ -107,13 +100,6 @@ export const productsApi = createApi({
         const imagesArr = Array.isArray(item.images) && item.images.length
           ? item.images
           : (item.image ? [item.image] : [])
-        const categoryLower = String(item.category || '').toLowerCase()
-        const perfumeCats = new Set(['floral', 'aquatic', 'oriental', 'woody'])
-        const derivedType = (() => {
-          const t = item.type ? String(item.type).toLowerCase() : ''
-          if (t === 'perfume' || t === 'jewelry') return t
-          return perfumeCats.has(categoryLower) ? 'perfume' : 'jewelry'
-        })()
         const mapped: Product = {
           _id: item._id,
           name: item.name,
@@ -127,7 +113,7 @@ export const productsApi = createApi({
           isActive: item.inStock ?? true,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
-          type: derivedType,
+          type: item.type,
         }
         return { success: true, data: mapped } as ProductResponse
       },

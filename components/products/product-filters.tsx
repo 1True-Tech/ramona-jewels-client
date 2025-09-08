@@ -1,34 +1,27 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { useMemo } from "react"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Gem, Sparkles } from "lucide-react"
-import { jewelryCategories, perfumeCategories } from "@/lib/product-data"
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
+import type { Product as ApiProduct } from "@/store/apiTypes"
 
 interface ProductFiltersProps {
   selectedCategory: string
   onCategoryChange: (category: string) => void
-  selectedType: "all" | "jewelry" | "perfume"
+  // Selected product type id or 'all'
+  selectedTypeId: string | "all"
   priceRange: number[]
   onPriceRangeChange: (range: number[]) => void
+  // Products list within the selected type scope to compute counts/brands
+  products: ApiProduct[]
+  selectedBrand: string
+  onBrandChange: (brand: string) => void
 }
-
-const brands = [
-  { id: "luxe-atelier", name: "Luxe Atelier", count: 23, type: "jewelry" },
-  { id: "atelier-rose", name: "Atelier Rose", count: 18, type: "jewelry" },
-  { id: "royal-gems", name: "Royal Gems", count: 15, type: "jewelry" },
-  { id: "ocean-pearls", name: "Ocean Pearls", count: 12, type: "jewelry" },
-  { id: "luxury-scents", name: "Luxury Scents", count: 25, type: "perfume" },
-  { id: "aqua-fragrances", name: "Aqua Fragrances", count: 20, type: "perfume" },
-  { id: "oriental-luxe", name: "Oriental Luxe", count: 15, type: "perfume" },
-]
-
-// Materials and gemstones should come from backend data
-// Removed mock data arrays
 
 const ratings = [
   { stars: 5, count: 89 },
@@ -41,33 +34,47 @@ const ratings = [
 export function ProductFilters({
   selectedCategory,
   onCategoryChange,
-  selectedType,
+  selectedTypeId,
   priceRange,
   onPriceRangeChange,
+  products,
+  selectedBrand,
+  onBrandChange,
 }: ProductFiltersProps) {
-  const getCategories = () => {
-    if (selectedType === "jewelry") return jewelryCategories
-    if (selectedType === "perfume") return perfumeCategories
-    return [...jewelryCategories, ...perfumeCategories]
-  }
+  // Fetch categories from backend based on selected product type
+  const { data: categoriesResp, isLoading: categoriesLoading } = useGetCategoriesQuery(
+    selectedTypeId === "all" ? undefined : { productType: selectedTypeId }
+  )
 
-  const getBrands = () => {
-    if (selectedType === "all") return brands
-    return brands.filter((brand) => brand.type === selectedType)
-  }
+  const categories = useMemo(() => categoriesResp?.data ?? [], [categoriesResp])
+
+  // Compute counts by category name from provided products
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of products) {
+      const key = (p.category || "").toString()
+      if (!key) continue
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+    return counts
+  }, [products])
+
+  // Derive brand options and counts from products
+  const brands = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of products) {
+      const b = (p.brand || "").toString()
+      if (!b) continue
+      counts.set(b, (counts.get(b) || 0) + 1)
+    }
+    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }))
+  }, [products])
 
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
       {/* Categories */}
       <div>
-        <h3 className="font-semibold mb-4 flex items-center space-x-2">
-          {selectedType === "jewelry" ? (
-            <Gem className="h-4 w-4 text-primary" />
-          ) : selectedType === "perfume" ? (
-            <Sparkles className="h-4 w-4 text-primary" />
-          ) : null}
-          <span>Categories</span>
-        </h3>
+        <h3 className="font-semibold mb-4">Categories</h3>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="category-all" className="flex items-center space-x-2 cursor-pointer">
@@ -75,28 +82,34 @@ export function ProductFilters({
                 id="category-all"
                 checked={selectedCategory === ""}
                 onCheckedChange={() => onCategoryChange("")}
+                disabled={categoriesLoading}
               />
               <span>All Categories</span>
             </Label>
             <Badge variant="outline" className="text-xs">
-              {getCategories().reduce((sum, cat) => sum + cat.productCount, 0)}
+              {products.length}
             </Badge>
           </div>
-          {getCategories().map((category) => (
-            <div key={category.id} className="flex items-center justify-between">
-              <Label htmlFor={`category-${category.id}`} className="flex items-center space-x-2 cursor-pointer">
-                <Checkbox
-                  id={`category-${category.id}`}
-                  checked={selectedCategory === category.id}
-                  onCheckedChange={() => onCategoryChange(category.id)}
-                />
-                <span className="capitalize">{category.name}</span>
-              </Label>
-              <Badge variant="outline" className="text-xs">
-                {category.productCount}
-              </Badge>
-            </div>
-          ))}
+          {categories.map((category: any) => {
+            const isChecked = selectedCategory.toLowerCase() === (category?.name || "").toLowerCase()
+            const count = categoryCounts.get(category?.name) || 0
+            return (
+              <div key={category._id} className="flex items-center justify-between">
+                <Label htmlFor={`category-${category._id}`} className="flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    id={`category-${category._id}`}
+                    checked={isChecked}
+                    onCheckedChange={() => onCategoryChange(category.name)}
+                    disabled={categoriesLoading}
+                  />
+                  <span className="capitalize">{category.name}</span>
+                </Label>
+                <Badge variant="outline" className="text-xs">
+                  {count}
+                </Badge>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -127,10 +140,21 @@ export function ProductFilters({
       <div>
         <h3 className="font-semibold mb-4">Brands</h3>
         <div className="space-y-2">
-          {getBrands().map((brand) => (
-            <div key={brand.id} className="flex items-center justify-between">
-              <Label htmlFor={`brand-${brand.id}`} className="flex items-center space-x-2 cursor-pointer">
-                <Checkbox id={`brand-${brand.id}`} />
+          <div className="flex items-center justify-between">
+            <Label htmlFor={`brand-all`} className="flex items-center space-x-2 cursor-pointer">
+              <Checkbox id={`brand-all`} checked={selectedBrand === ""} onCheckedChange={() => onBrandChange("")} />
+              <span>All Brands</span>
+            </Label>
+            <Badge variant="outline" className="text-xs">{products.length}</Badge>
+          </div>
+          {brands.map((brand) => (
+            <div key={brand.name} className="flex items-center justify-between">
+              <Label htmlFor={`brand-${brand.name}`} className="flex items-center space-x-2 cursor-pointer">
+                <Checkbox
+                  id={`brand-${brand.name}`}
+                  checked={selectedBrand.toLowerCase() === brand.name.toLowerCase()}
+                  onCheckedChange={() => onBrandChange(brand.name)}
+                />
                 <span>{brand.name}</span>
               </Label>
               <Badge variant="outline" className="text-xs">
@@ -142,13 +166,6 @@ export function ProductFilters({
       </div>
 
       <Separator />
-
-      {/* Jewelry-specific filters */}
-      {(selectedType === "all" || selectedType === "jewelry") && (
-        <>
-          {/* Materials and Gemstones filters removed - should come from backend */}
-        </>
-      )}
 
       {/* Rating */}
       <div>

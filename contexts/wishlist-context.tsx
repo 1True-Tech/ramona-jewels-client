@@ -11,7 +11,7 @@ interface WishlistItem {
   price: number
   image: string
   category: string
-  type: "jewelry" | "perfume" | "product"
+  type: string
 }
 
 interface WishlistState {
