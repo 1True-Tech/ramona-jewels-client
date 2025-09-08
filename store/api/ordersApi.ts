@@ -63,6 +63,15 @@ export const ordersApi = createApi({
       providesTags: (result, error, id) => [{ type: 'Order', id }],
     }),
     
+    // Create Stripe PaymentIntent
+    createStripePaymentIntent: builder.mutation<{ success: boolean; data: { clientSecret: string; orderId: string; readableOrderId: string; amount: number } }, any>({
+      query: (body) => ({
+        url: `/stripe/create-payment-intent`,
+        method: 'POST',
+        body,
+      }),
+    }),
+    
     // Update order status
     updateOrderStatus: builder.mutation<{ success: boolean }, UpdateOrderStatusRequest>({
       query: ({ id, ...body }) => ({
@@ -110,6 +119,7 @@ export const {
   useGetOrdersQuery,
   useGetOrderStatsQuery,
   useGetOrderQuery,
+  useCreateStripePaymentIntentMutation,
   useUpdateOrderStatusMutation,
   useCancelOrderMutation,
   useRefundOrderMutation,

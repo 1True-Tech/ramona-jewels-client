@@ -309,7 +309,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
 
               <h1 className="text-3xl lg:text-4xl font-bold font-playfair mb-4 gradient-text">{product.name}</h1>
 
-              <div className="flex items-center gap-4 mb-4">
+              <div className="grid grid-cols-1 md: gap-4 mb-4">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
@@ -635,7 +635,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
                   ) : (localReviews?.length ?? 0) === 0 ? (
                     <p className="text-sm text-muted-foreground">No reviews yet. Be the first!</p>
                   ) : (
-                    <ul className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    <ul className="space-y-4">
                       {(localReviews ?? []).map((r: Review) => (
                         <li key={r._id} className="border rounded p-3">
                           <div className="flex items-center justify-between">
