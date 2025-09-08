@@ -53,11 +53,11 @@ export function ProductCard({ product }: ProductCardProps) {
       price: product.price,
       image: product.image,
     })
-    toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
-      variant: "success",
-    })
+    // toast({
+    //   title: "Added to cart",
+    //   description: `${product.name} has been added to your cart.`,
+    //   variant: "success",
+    // })
   }
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
@@ -76,11 +76,11 @@ export function ProductCard({ product }: ProductCardProps) {
     
     if (isCurrentlyInWishlist) {
       removeFromWishlist(product.id)
-      toast({
-        title: "Removed from wishlist",
-        description: `${product.name} has been removed from your wishlist.`,
-        variant: "info",
-      })
+      // toast({
+      //   title: "Removed from wishlist",
+      //   description: `${product.name} has been removed from your wishlist.`,
+      //   variant: "info",
+      // })
     } else {
       addToWishlist({
         id: product.id,
@@ -89,11 +89,6 @@ export function ProductCard({ product }: ProductCardProps) {
         image: product.image,
         category: product.type || "products",
         type: product.type || "products",
-      })
-      toast({
-        title: "Added to wishlist",
-        description: `${product.name} has been added to your wishlist.`,
-        variant: "success",
       })
     }
   }

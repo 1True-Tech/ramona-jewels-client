@@ -26,6 +26,14 @@ interface RefreshTokenResponse {
   expiresIn?: number
 }
 
+interface GoogleLoginRequest {
+  idToken: string
+}
+
+interface FacebookLoginRequest {
+  accessToken: string
+}
+
 const baseQuery = fetchBaseQuery({
 
   baseUrl: process.env.NEXT_PUBLIC_API_URL + '/auth',
@@ -136,6 +144,40 @@ export const authApi = createApi({
       },
     }),
     
+    // Social: Google Sign-In
+    googleSignIn: builder.mutation<AuthResponse, GoogleLoginRequest>({
+      query: (payload) => ({
+        url: '/google',
+        method: 'POST',
+        body: payload,
+      }),
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(loginSuccess({ user: data.data, token: data.token }))
+        } catch (error) {
+          // handled by baseQueryWithReauth
+        }
+      },
+    }),
+
+    // Social: Facebook Sign-In
+    facebookSignIn: builder.mutation<AuthResponse, FacebookLoginRequest>({
+      query: (payload) => ({
+        url: '/facebook',
+        method: 'POST',
+        body: payload,
+      }),
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(loginSuccess({ user: data.data, token: data.token }))
+        } catch (error) {
+          // handled by baseQueryWithReauth
+        }
+      },
+    }),
+    
     logout: builder.mutation<{ success: boolean }, void>({
       query: () => ({
         url: '/logout',
@@ -202,4 +244,6 @@ export const {
   useGetMeQuery,
   useRefreshTokenMutation,
   useUpdateProfileMutation,
+  useGoogleSignInMutation,
+  useFacebookSignInMutation,
 } = authApi
