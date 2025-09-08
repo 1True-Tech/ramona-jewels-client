@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -23,6 +23,8 @@ import {
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 import { useOrderTracking } from "@/contexts/order-tracking-context"
+import { io, Socket } from 'socket.io-client'
+import { toast } from "@/hooks/use-toast"
 
 interface Order {
   id: string
@@ -39,16 +41,68 @@ interface Order {
   createdAt: Date
 }
 
-
-
 function OrderSuccess() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
   const { initializeTracking } = useOrderTracking()
-  
+  const socketRef = useRef<Socket | null>(null)
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Join socket room for real-time payment/status updates
+  useEffect(() => {
+    if (!orderId) return
+    const serverUrl = (process.env.NEXT_PUBLIC_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || '')
+      .replace(/\/api\/v1\/?$/, '')
+      .replace(/\/$/, '')
+    if (!serverUrl) return
+
+    const socket = io(serverUrl, { transports: ['websocket'], autoConnect: true })
+    socketRef.current = socket
+
+    socket.on('connect', () => {
+      socket.emit('join_order', orderId)
+    })
+
+    socket.on('order:payment_update', (payload: { orderId: string; paymentStatus?: string; status?: string }) => {
+      setOrder((prev) => {
+        if (!prev) return prev
+        const nextStatus = payload.status ?? prev.status
+        const nextPaymentStatus = payload.paymentStatus ?? prev.payment?.status
+        const updated = {
+          ...prev,
+          status: nextStatus,
+          payment: { ...(prev.payment || {}), status: nextPaymentStatus }
+        }
+        // Persist to localStorage
+        try {
+          const list = JSON.parse(localStorage.getItem('orders') || '[]')
+          const idx = list.findIndex((o: any) => o.id === prev.id)
+          if (idx >= 0) {
+            list[idx] = { ...list[idx], status: updated.status, payment: { ...(list[idx].payment || {}), status: nextPaymentStatus } }
+            localStorage.setItem('orders', JSON.stringify(list))
+          }
+        } catch {}
+        return updated
+      })
+
+      // Notify user
+      const fmt = (s?: string) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      const isBad = (payload.paymentStatus === 'failed') || (payload.status === 'cancelled')
+      const desc = [
+        payload.paymentStatus ? `Payment: ${fmt(payload.paymentStatus)}` : null,
+        payload.status ? `Status: ${fmt(payload.status)}` : null,
+      ].filter(Boolean).join(' • ')
+      toast({ variant: isBad ? 'destructive' : 'success', title: 'Order Update', description: desc })
+    })
+
+    return () => {
+      try { socket.emit('leave_order', orderId) } catch {}
+      socket.disconnect()
+      socketRef.current = null
+    }
+  }, [orderId])
 
   useEffect(() => {
     if (!orderId) {
@@ -107,6 +161,16 @@ function OrderSuccess() {
     }
   }
 
+  const formatStatus = (s: string) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const statusColor = (s: string) => {
+    const x = (s || '').toLowerCase()
+    if (x === 'failed' || x === 'cancelled') return 'bg-red-500 text-red-800 bg-red-100'
+    if (x === 'processing' || x === 'in_transit' || x === 'out_for_delivery') return 'bg-yellow-500 text-yellow-800 bg-yellow-100'
+    return 'bg-green-500 text-green-800 bg-green-100'
+  }
+  const statusSequence = ['confirmed','processing','in_transit','out_for_delivery','delivered']
+  const currentIndex = Math.max(0, statusSequence.indexOf((order.status || 'confirmed').toLowerCase()))
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -156,17 +220,40 @@ function OrderSuccess() {
                 <CardContent>
                   <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div className={`w-3 h-3 rounded-full ${statusColor(order.status).split(' ')[0]}`}></div>
                       <div>
-                        <div className="font-medium text-green-800">Order Confirmed</div>
+                        <div className="font-medium text-green-800">{formatStatus(order.status || 'Confirmed')}</div>
                         <div className="text-sm text-green-600">
                           {order.createdAt.toLocaleDateString()} at {order.createdAt.toLocaleTimeString()}
                         </div>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      Confirmed
+                    <Badge variant="secondary" className={`${statusColor(order.status).split(' ').slice(1).join(' ')}`}>
+                      {formatStatus(order.status || 'Confirmed')}
                     </Badge>
+                  </div>
+
+                  {/* Status Timeline */}
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between">
+                      {statusSequence.map((s, idx) => {
+                        const reached = idx <= currentIndex
+                        const failed = (order.status || '').toLowerCase() === 'failed' || (order.status || '').toLowerCase() === 'cancelled'
+                        return (
+                          <div key={s} className="flex-1 flex items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${failed ? 'bg-red-500 text-white' : reached ? 'bg-green-600 text-white' : 'bg-muted text-muted-foreground'}`}>{idx+1}</div>
+                            {idx < statusSequence.length - 1 && (
+                              <div className={`h-1 flex-1 mx-2 rounded ${failed ? 'bg-red-300' : idx < currentIndex ? 'bg-green-400' : 'bg-muted'}`}></div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                      {statusSequence.map((s) => (
+                        <span key={s} className="w-20 text-center truncate">{formatStatus(s)}</span>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
