@@ -131,6 +131,8 @@ body {
   border-color: hsl(var(--primary));
 }
 
+
+
 /* Accordion Animations */
 @keyframes accordion-down {
   from {
