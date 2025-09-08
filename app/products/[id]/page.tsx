@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Star,
   Heart,
@@ -30,6 +32,8 @@ import { Navbar } from "@/components/layouts/navbar"
 import { ProductCard } from "@/components/products/product-card"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 import { useToast } from "@/hooks/use-toast"
+import { useGetReviewsByProductQuery, useCreateReviewMutation, Review } from '@/store/api/reviewsApi'
+import { useProductReviewsRealtime } from '@/hooks/use-product-reviews-realtime'
 
 // Helper: build server/base URL for images
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
@@ -111,6 +115,55 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
   const { addItem } = useCart()
   const dispatch = useAppDispatch()
   const { toast } = useToast()
+
+  // Reviews hooks/state
+  const { data: reviews = [], isLoading: reviewsLoading } = useGetReviewsByProductQuery(productId)
+  const [createReview, { isLoading: creatingReview }] = useCreateReviewMutation()
+  const [rating, setRating] = useState<number>(0)
+  const [comment, setComment] = useState<string>("")
+  const [reviewName, setReviewName] = useState<string>("")
+
+  const handleSubmitReview = async () => {
+    if (!rating) {
+      toast({ title: 'Please select a rating', variant: 'destructive' })
+      return
+    }
+    try {
+      await createReview({ productId, rating, comment, name: reviewName || undefined }).unwrap()
+      setRating(0)
+      setComment('')
+      setReviewName('')
+      toast({ title: 'Thanks for your review!' })
+    } catch (e: any) {
+      toast({ title: 'Failed to submit review', description: e?.data?.message || 'Please try again', variant: 'destructive' })
+    }
+  }
+
+  // Real-time reviews subscription
+  const [localReviews, setLocalReviews] = useState<Review[] | null>(null)
+  
+  // Initialize/sync local list when fetched
+  useEffect(() => {
+    setLocalReviews(reviews)
+  }, [reviews])
+
+  useProductReviewsRealtime(productId, (payload) => {
+    const { review } = payload || {}
+    if (!review) return
+    setLocalReviews((prev) => {
+      const list = prev ?? reviews ?? []
+      return [review, ...list]
+    })
+  })
+
+  // Derive live average rating and total review count
+  const { averageRating, totalReviews } = useMemo(() => {
+    const list = localReviews ?? reviews ?? []
+    const count = list.length
+    if (!count) return { averageRating: 0, totalReviews: 0 }
+    const sum = list.reduce((acc, r) => acc + (Number(r.rating) || 0), 0)
+    return { averageRating: sum / count, totalReviews: count }
+  }, [localReviews, reviews])
 
   if (isProductLoading) {
     return (
@@ -262,12 +315,12 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
                     <Star
                       key={i}
                       className={`h-4 w-4 ${
-                        i < Math.floor(product.rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                        i < Math.floor(averageRating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
                       }`}
                     />
                   ))}
                   <span className="text-sm text-muted-foreground ml-2">
-                    {product.rating} ({product.reviews} reviews)
+                    {averageRating.toFixed(1)} ({totalReviews} reviews)
                   </span>
                 </div>
               </div>
@@ -550,49 +603,51 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
 
             <TabsContent value="reviews" className="mt-6">
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold">Customer Reviews</h3>
-                  <Button variant="outline" className="border-primary/20 hover:bg-primary/5 bg-transparent">
-                    Write a Review
-                  </Button>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="p-6 rounded-xl bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 border border-primary/20">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold gradient-text mb-2">{product.rating}</div>
-                      <div className="flex justify-center mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < Math.floor(product.rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                            }`}
-                          />
+                {/* Review form */}
+                <div className="rounded-lg border p-4">
+                  <h3 className="font-medium mb-3">Write a review</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Your rating:</span>
+                      <div className="flex items-center gap-1">
+                        {[1,2,3,4,5].map((r) => (
+                          <button key={r} type="button" aria-label={`Rate ${r}`} onClick={() => setRating(r)} className={`p-1 rounded ${rating >= r ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                            ★
+                          </button>
                         ))}
                       </div>
-                      <div className="text-sm text-muted-foreground">{product.reviews} reviews</div>
                     </div>
+                    <Input placeholder="Your name (optional)" value={reviewName} onChange={(e) => setReviewName(e.target.value)} />
                   </div>
-
-                  <div className="md:col-span-2 space-y-4">
-                    {[5, 4, 3, 2, 1].map((stars) => (
-                      <div key={stars} className="flex items-center gap-3">
-                        <span className="text-sm w-8">{stars}★</span>
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full gradient-primary"
-                            style={{ width: `${Math.random() * 80 + 10}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm text-muted-foreground w-8">{Math.floor(Math.random() * 50)}</span>
-                      </div>
-                    ))}
+                  <div className="mt-3">
+                    <Textarea placeholder="Share your experience" value={comment} onChange={(e) => setComment(e.target.value)} />
+                  </div>
+                  <div className="mt-3">
+                    <Button onClick={handleSubmitReview} disabled={creatingReview}>Submit review</Button>
                   </div>
                 </div>
 
-                <div className="text-center text-muted-foreground py-8">
-                  <p>Customer reviews will be displayed when available from the backend.</p>
+                {/* Reviews list */}
+                <div className="space-y-4">
+                  <h3 className="font-medium">Customer reviews</h3>
+                  {reviewsLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading reviews…</p>
+                  ) : (localReviews?.length ?? 0) === 0 ? (
+                    <p className="text-sm text-muted-foreground">No reviews yet. Be the first!</p>
+                  ) : (
+                    <ul className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                      {(localReviews ?? []).map((r: Review) => (
+                        <li key={r._id} className="border rounded p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium">{r.name || 'Anonymous'}</div>
+                            <div className="text-yellow-500">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div>
+                          </div>
+                          {r.comment && <p className="mt-2 text-sm text-muted-foreground">{r.comment}</p>}
+                          <div className="mt-1 text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </TabsContent>
