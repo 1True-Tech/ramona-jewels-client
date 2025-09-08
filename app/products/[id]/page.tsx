@@ -29,6 +29,7 @@ import type { Product as ApiProduct } from "@/store/apiTypes"
 import { Navbar } from "@/components/layouts/navbar"
 import { ProductCard } from "@/components/products/product-card"
 import { MobileNav } from "@/components/layouts/mobile-nav"
+import { useToast } from "@/hooks/use-toast"
 
 // Helper: build server/base URL for images
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
@@ -109,6 +110,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
   const [quantity, setQuantity] = useState(1)
   const { addItem } = useCart()
   const dispatch = useAppDispatch()
+  const { toast } = useToast()
 
   if (isProductLoading) {
     return (
@@ -161,6 +163,30 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
        message: `${quantity} ${product.name}(s) added to your cart.`
      }))
    }
+
+  const handleShare = async () => {
+    try {
+      const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
+      const shareData: ShareData = {
+        title: product.name,
+        text: `${product.brand} • ${product.name} — $${product.price.toFixed(2)}`,
+        url: shareUrl,
+      }
+      if (navigator.share) {
+        await navigator.share(shareData)
+        // no toast if successful
+      } else if (navigator.clipboard && shareUrl) {
+        await navigator.clipboard.writeText(shareUrl)
+        // no toast if successful
+      } else {
+        throw new Error("Sharing not supported on this device.")
+      }
+    } catch (err) {
+      // user may cancel share; only notify on actual errors
+      // eslint-disable-next-line no-console
+      console.debug('Share error or canceled', err)
+    }
+  }
  
    const discount = product.originalPrice
      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -188,23 +214,10 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
                 <Badge className="absolute top-4 left-4 gradient-primary text-white border-0">{product.badge}</Badge>
               )}
               {discount > 0 && (
-                <Badge variant="destructive" className="absolute top-4 right-4">
+                <Badge variant="destructive" className="absolute top-4 right-4 bg-red-400">
                   -{discount}%
                 </Badge>
               )}
-              <Badge variant="outline" className="absolute bottom-4 left-4 bg-background/80 border-primary/20">
-                {isJewelry ? (
-                  <>
-                    <Gem className="h-3 w-3 mr-1" />
-                    Jewelry
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Perfume
-                  </>
-                )}
-              </Badge>
             </div>
 
             <div className="grid grid-cols-4 gap-2">
@@ -312,7 +325,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  Fragrance Notes
+                  Product Notes
                 </h3>
                 <div className="space-y-3">
                   {product.topNotes && product.topNotes?.length > 0 && (
@@ -398,6 +411,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
                   variant="outline"
                   size="lg"
                   className="flex-1 border-primary/20 hover:bg-primary/5 bg-transparent"
+                  onClick={handleShare}
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
@@ -411,7 +425,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
                 <Truck className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium text-sm">Free Shipping</p>
-                  <p className="text-xs text-muted-foreground">On orders over $500</p>
+                  <p className="text-xs text-muted-foreground">On orders over $5000</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -448,7 +462,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
                 value="specifications"
                 className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
-                Fragrance Profile
+                Product Profile
               </TabsTrigger>
               <TabsTrigger value="reviews" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
                 Reviews
@@ -457,7 +471,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
 
             <TabsContent value="description" className="mt-6">
               <div className="prose max-w-none">
-                <h3 className="text-xl font-semibold mb-4">About This {isJewelry ? "Piece" : "Fragrance"}</h3>
+                <h3 className="text-xl font-semibold mb-4">About This {product.category}</h3>
                 <p className="text-muted-foreground mb-6 text-lg leading-relaxed">{product.description}</p>
 
                 {/* Additional product details will be displayed when available from the backend */}
@@ -467,7 +481,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
             <TabsContent value="specifications" className="mt-6">
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold mb-4">
-                  Fragrance Pyramid
+                  Product Pyramid
                 </h3>
 
                 {isJewelry ? (

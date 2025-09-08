@@ -120,10 +120,10 @@ export function ProductCard({ product }: ProductCardProps) {
     <motion.div
       whileHover={{ y: -5 }}
       transition={{ duration: 0.2 }}
-      className="group relative bg-card rounded-lg border border-primary/10 overflow-hidden transition-all duration-300 jewelry-sparkle"
+      className="group relative bg-card rounded-lg border border-primary/10 overflow-hidden transition-all duration-300 jewelry-sparkle min-w-full h-full"
     >
       <Link href={getProductUrl()}>
-        <div className="relative aspect-square overflow-hidden">
+        <div className="relative aspect-square overflow-hidden w-full">
           <Image
             src={product.image || "/placeholder.svg"}
             alt={product.name}
