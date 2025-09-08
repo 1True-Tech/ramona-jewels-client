@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Filter, Grid, List, Gem, Sparkles } from "lucide-react"
+import { Search, Filter, Grid, List } from "lucide-react"
 // import { allProducts } from "@/lib/product-data"
 import { Navbar } from "@/components/layouts/navbar"
 import { ProductSort } from "@/components/products/product-sort"
@@ -13,6 +13,8 @@ import { Product as UIProduct, ProductCard } from "@/components/products/product
 import { MobileNav } from "@/components/layouts/mobile-nav"
 import { useGetProductsQuery } from "@/store/api/productsApi"
 import type { Product as ApiProduct } from "@/store/apiTypes"
+import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
@@ -38,20 +40,34 @@ const toUIProduct = (p: ApiProduct): UIProduct => ({
   rating: undefined,
   reviews: undefined,
   badge: undefined,
-  type: (p.type === "perfume" || p.type === "jewelry") ? (p.type as "perfume" | "jewelry") : undefined,
+  // Pass through any string type so new product types display correctly
+  type: p.type,
 })
 
 export default function ProductsPage() {
-  const { data, isLoading, error } = useGetProductsQuery()
+  const { data, isLoading, error } = useGetProductsQuery({ limit: 1000 })
+  const { data: typesResp } = useGetProductTypesQuery()
+
   const [baseProducts, setBaseProducts] = useState<ApiProduct[]>([])
   const [products, setProducts] = useState<ApiProduct[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
-  const [selectedType, setSelectedType] = useState<"all" | "jewelry" | "perfume">("all")
+  const [selectedTypeId, setSelectedTypeId] = useState<string | "all">("all")
+  const [selectedBrand, setSelectedBrand] = useState("")
   const [priceRange, setPriceRange] = useState([0, 5000])
   const [sortBy, setSortBy] = useState("featured")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
+
+  // Fetch categories for the selected type (used to filter products by type via category membership)
+  const { data: typeCategoriesResp } = useGetCategoriesQuery(
+    selectedTypeId === "all" ? undefined : { productType: selectedTypeId }
+  )
+
+  const typeCategoryNames = useMemo(
+    () => new Set((typeCategoriesResp?.data ?? []).map((c: any) => String(c.name))),
+    [typeCategoriesResp]
+  )
 
   useEffect(() => {
     if (data?.data) {
@@ -60,8 +76,20 @@ export default function ProductsPage() {
     }
   }, [data])
 
+  // Pre-filter products for counts/brands within selected type scope (no search/brand/category applied)
+  const typeScopedProducts = useMemo(() => {
+    if (selectedTypeId === "all") return baseProducts
+    if (!typeCategoryNames.size) return []
+    return baseProducts.filter((p) => typeCategoryNames.has(String(p.category)))
+  }, [baseProducts, selectedTypeId, typeCategoryNames])
+
   useEffect(() => {
     let filtered: ApiProduct[] = [...baseProducts]
+
+    // Filter by selected type via categories list
+    if (selectedTypeId !== "all") {
+      filtered = filtered.filter((product) => typeCategoryNames.has(String(product.category)))
+    }
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
@@ -73,12 +101,12 @@ export default function ProductsPage() {
       )
     }
 
-    if (selectedType !== "all") {
-      filtered = filtered.filter((product) => (product.type || "").toLowerCase() === selectedType)
+    if (selectedCategory) {
+      filtered = filtered.filter((product) => (product.category || "").toLowerCase() === selectedCategory.toLowerCase())
     }
 
-    if (selectedCategory) {
-      filtered = filtered.filter((product) => (product.category || "") === selectedCategory)
+    if (selectedBrand) {
+      filtered = filtered.filter((product) => (product.brand || "").toLowerCase() === selectedBrand.toLowerCase())
     }
 
     filtered = filtered.filter((product) => product.price >= priceRange[0] && product.price <= priceRange[1])
@@ -100,7 +128,9 @@ export default function ProductsPage() {
     }
 
     setProducts(filtered)
-  }, [baseProducts, searchQuery, selectedCategory, selectedType, priceRange, sortBy])
+  }, [baseProducts, searchQuery, selectedCategory, selectedBrand, selectedTypeId, typeCategoryNames, priceRange, sortBy])
+
+  const productTypes = typesResp?.data ?? []
 
   return (
     <div className="min-h-screen bg-background">
@@ -111,7 +141,7 @@ export default function ProductsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold font-playfair gradient-text mb-4">All Products</h1>
           <p className="text-muted-foreground mb-8">
-            Discover our complete collection of luxury jewelry and premium fragrances
+            Discover our complete collection of luxury products
           </p>
         </motion.div>
 
@@ -123,46 +153,45 @@ export default function ProductsPage() {
           <div className="text-sm text-red-500 mb-4">Failed to load products.</div>
         )}
 
-        {/* Type Filter Tabs */}
+        {/* Type Filter Tabs (Dynamic) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="flex justify-center mb-8"
         >
-          <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-50 dark:to-orange-50 p-2 rounded-full border border-primary">
+          <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-50 dark:to-orange-50 p-2 rounded-full border border-primary overflow-x-auto max-w-full">
             <Button
-              variant={selectedType === "all" ? "default" : "ghost"}
+              variant={selectedTypeId === "all" ? "default" : "ghost"}
               size="sm"
               className={`rounded-full ${
-                selectedType === "all" ? "gradient-primary text-white border-0" : "hover:bg-primary/10"
+                selectedTypeId === "all" ? "gradient-primary text-white border-0" : "hover:bg-primary/10"
               }`}
-              onClick={() => setSelectedType("all")}
+              onClick={() => {
+                setSelectedTypeId("all")
+                setSelectedCategory("")
+                setSelectedBrand("")
+              }}
             >
               All Products
             </Button>
-            <Button
-              variant={selectedType === "jewelry" ? "default" : "ghost"}
-              size="sm"
-              className={`rounded-full ${
-                selectedType === "jewelry" ? "gradient-primary text-white border-0" : "hover:bg-primary/10"
-              }`}
-              onClick={() => setSelectedType("jewelry")}
-            >
-              <Gem className="h-4 w-4 mr-2" />
-              Jewelry
-            </Button>
-            <Button
-              variant={selectedType === "perfume" ? "default" : "ghost"}
-              size="sm"
-              className={`rounded-full ${
-                selectedType === "perfume" ? "gradient-primary text-white border-0" : "hover:bg-primary/10"
-              }`}
-              onClick={() => setSelectedType("perfume")}
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Perfumes
-            </Button>
+            {productTypes.map((t: any) => (
+              <Button
+                key={t._id}
+                variant={selectedTypeId === t._id ? "default" : "ghost"}
+                size="sm"
+                className={`rounded-full ${
+                  selectedTypeId === t._id ? "gradient-primary text-white border-0" : "hover:bg-primary/10"
+                }`}
+                onClick={() => {
+                  setSelectedTypeId(t._id)
+                  setSelectedCategory("")
+                  setSelectedBrand("")
+                }}
+              >
+                {t.name}
+              </Button>
+            ))}
           </div>
         </motion.div>
 
@@ -172,7 +201,7 @@ export default function ProductsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search jewelry & fragrances..."
+              placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 border-primary/20 focus:border-primary"
@@ -223,18 +252,19 @@ export default function ProductsPage() {
             <ProductFilters
               selectedCategory={selectedCategory}
               onCategoryChange={setSelectedCategory}
-              selectedType={selectedType}
-              // onTypeChange={setSelectedType}
+              selectedTypeId={selectedTypeId}
               priceRange={priceRange}
               onPriceRangeChange={setPriceRange}
+              products={typeScopedProducts}
+              selectedBrand={selectedBrand}
+              onBrandChange={setSelectedBrand}
             />
           </div>
 
         {/* Products Grid */}
           <div className="flex-1">
             <div className="mb-4 text-sm text-muted-foreground">
-              Showing {products.length}{" "}
-              {selectedType === "all" ? "products" : selectedType === "jewelry" ? "jewelry pieces" : "fragrances"}
+              Showing {products.length} products
             </div>
 
             <motion.div
@@ -265,7 +295,8 @@ export default function ProductsPage() {
                   onClick={() => {
                     setSearchQuery("")
                     setSelectedCategory("")
-                    setSelectedType("all")
+                    setSelectedTypeId("all")
+                    setSelectedBrand("")
                     setPriceRange([0, 5000])
                   }}
                   className="border-primary/20 hover:bg-primary/5"

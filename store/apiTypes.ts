@@ -99,6 +99,7 @@ export interface Product {
     maxPrice?: number
     inStock?: boolean
     isActive?: boolean
+    sort?: string
   }
 
 export interface OrderItem {

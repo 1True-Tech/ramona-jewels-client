@@ -31,23 +31,25 @@ const toUIProduct = (p: ApiProduct): UIProduct => ({
   price: p.price,
   originalPrice: p.originalPrice,
   image: toImageUrl(p.images?.[0]),
-  type: (p.type === "perfume" || p.type === "jewelry") ? (p.type as "perfume" | "jewelry") : undefined,
+  // allow any type string for dynamic product types
+  type: p.type,
 });
 
 export function FeaturedProducts() {
+  // keep current tabs for now; they only affect local filtering of the featured list
   const [selectedCategory, setSelectedCategory] = useState<"All" | "Jewelry" | "Perfumes">("All");
-  const { data } = useGetProductsQuery();
+  // Fetch 10 latest products from backend directly
+  const { data } = useGetProductsQuery({ limit: 10, sort: "-createdAt" });
 
   const featured = useMemo(() => {
-    const items = data?.data ?? [];
-    // pick up to 8 items for grid; you can adjust as needed
-    return items.slice(0, 8).map(toUIProduct);
+    const items = (data?.data ?? []).slice();
+    return items.map(toUIProduct);
   }, [data]);
 
   const filteredProducts = useMemo(() => {
     if (selectedCategory === "All") return featured;
     const type = selectedCategory === "Jewelry" ? "jewelry" : "perfume";
-    return featured.filter((p) => p.type === type);
+    return featured.filter((p) => (p.type?.toLowerCase?.() || "") === type);
   }, [featured, selectedCategory]);
 
   return (

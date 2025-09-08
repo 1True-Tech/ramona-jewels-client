@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { ArrowLeft, Save, Upload, X } from "lucide-react"
@@ -14,7 +14,8 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/redux-auth-context"
-import { useGetProductQuery, useUpdateProductMutation } from "@/store/api/productsApi"
+import { useGetProductQuery, useUpdateProductMutation, useUploadProductImagesMutation } from "@/store/api/productsApi"
+import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -26,7 +27,11 @@ export default function EditProductPage() {
 
   const { data: productResponse, isLoading, error: productError } = useGetProductQuery(productId)
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation()
+  const [uploadImages, { isLoading: isUploading }] = useUploadProductImagesMutation()
+  const { data: categoriesResp, isLoading: loadingCategories } = useGetCategoriesQuery()
   const [saving, setSaving] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [images, setImages] = useState<string[]>([])
 
   const apiProduct = productResponse?.data
   const product = apiProduct
@@ -60,6 +65,12 @@ export default function EditProductPage() {
     }
   }, [product?.id])
 
+  useEffect(() => {
+    if (apiProduct) {
+      setImages(Array.isArray(apiProduct.images) ? apiProduct.images : (apiProduct.image ? [apiProduct.image] : []))
+    }
+  }, [apiProduct?._id])
+
   const handleSave = async () => {
     if (!product) return
     try {
@@ -81,7 +92,7 @@ export default function EditProductPage() {
       if (descEl) payload.description = descEl.value.trim()
 
       // Use controlled state for Select values
-      if (category) payload.category = category
+      if (category) payload.category = category // send category name for update
 
       if (priceEl) {
         const priceNum = parseFloat(priceEl.value)
@@ -99,6 +110,12 @@ export default function EditProductPage() {
       }
       if (inStockEl) payload.inStock = inStockEl.checked
 
+      if (images && images.length) {
+        payload.images = images
+        if (!payload.image) {
+          payload.image = images[0]
+        }
+      }
       if (sizeEl && sizeEl.value) payload.size = sizeEl.value
       if (concentrationEl && concentrationEl.value) payload.concentration = concentrationEl.value
 
@@ -215,12 +232,12 @@ export default function EditProductPage() {
                     <Label htmlFor="category">Category</Label>
                     <Select value={category} onValueChange={setCategory}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder={loadingCategories ? "Loading..." : "Select category"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="eau-de-parfum">Eau de Parfum</SelectItem>
-                        <SelectItem value="eau-de-toilette">Eau de Toilette</SelectItem>
-                        <SelectItem value="cologne">Cologne</SelectItem>
+                        {(categoriesResp?.data ?? []).map((c: any) => (
+                          <SelectItem key={c._id} value={c.name}>{c.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -321,15 +338,30 @@ export default function EditProductPage() {
                 <div className="space-y-4">
                   <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
                     <Image
-                      src={product.image || "/placeholder.svg"}
+                      src={(images && images[0]) || product.image || "/placeholder.svg"}
                       alt={product.name}
                       fill
                       className="object-cover"
                     />
                   </div>
-                  <Button variant="outline" className="w-full">
+                  <input ref={fileInputRef} type="file" className="hidden" accept="image/*" multiple onChange={async (e) => {
+                    const files = Array.from(e.target.files || [])
+                    if (!files.length) return
+                    const fd = new FormData()
+                    files.forEach((f) => fd.append("images", f))
+                    try {
+                      const uploaded = await uploadImages(fd).unwrap()
+                      const urls = uploaded?.data?.urls ?? []
+                      if (urls.length) setImages((prev) => [...prev, ...urls])
+                    } catch (err) {
+                      console.error(err)
+                    } finally {
+                      if (fileInputRef.current) fileInputRef.current.value = ""
+                    }
+                  }} />
+                  <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                     <Upload className="h-4 w-4 mr-2" />
-                    Upload New Image
+                    {isUploading ? "Uploading..." : "Upload New Image"}
                   </Button>
                 </div>
               </CardContent>
@@ -343,7 +375,7 @@ export default function EditProductPage() {
               <CardContent className="space-y-3">
                 <Button 
                   onClick={handleSave} 
-                  disabled={saving || isUpdating}
+                  disabled={saving || isUpdating || isUploading}
                   className="w-full gradient-primary text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />

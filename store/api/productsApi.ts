@@ -47,12 +47,18 @@ export const productsApi = createApi({
             searchParams.append(key, value.toString())
           }
         })
+
+        // Ensure we request a large page size by default so All Products shows everything
+        if (!(params as ProductQueryParams)?.limit && !searchParams.has('limit')) {
+          searchParams.set('limit', '1000')
+        }
         
-        return `?${searchParams.toString()}`
+        const qs = searchParams.toString()
+        return qs ? `?${qs}` : ''
       },
       providesTags: ['Products'],
       transformResponse: (response: any) => {
-        // Map server Perfume fields to client Product shape
+        // Map server fields to client Product shape
         const mapItem = (item: any): Product => {
           const imagesArr = Array.isArray(item.images) && item.images.length
             ? item.images

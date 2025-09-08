@@ -5,7 +5,7 @@ import type React from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
-import { Heart, ShoppingCart, Star, Gem, Sparkles } from "lucide-react"
+import { Heart, ShoppingCart, Star, Gem, Sparkles, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
@@ -22,7 +22,7 @@ export interface Product {
   rating?: number
   reviews?: number
   badge?: string
-  type?: "jewelry" | "perfume"
+  type?: string
 }
 
 interface ProductCardProps {
@@ -87,8 +87,8 @@ export function ProductCard({ product }: ProductCardProps) {
         name: product.name,
         price: product.price,
         image: product.image,
-        category: product.type || "product",
-        type: product.type || "product",
+        category: product.type || "products",
+        type: product.type || "products",
       })
       toast({
         title: "Added to wishlist",
@@ -104,6 +104,16 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const getProductUrl = () => {
     return `/products/${product.id}`
+  }
+
+  const renderTypeBadgeContent = () => {
+    if (!product.type) return null
+  
+    return (
+      <>
+        {product.type}
+      </>
+    )
   }
 
   return (
@@ -131,17 +141,7 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
             {product.type && (
               <Badge variant="outline" className="text-xs border-primary/20 bg-white">
-                {product.type === "jewelry" ? (
-                  <>
-                    <Gem className="h-3 w-3 mr-1" />
-                    Jewelry
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Perfume
-                  </>
-                )}
+                {renderTypeBadgeContent()}
               </Badge>
             )}
           </div>
