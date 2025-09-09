@@ -11,10 +11,12 @@ import { useMemo } from "react"
 
 
 export function HeroSection() {
+
+  const startChristmasMonth = 7
   const isChristmas = useMemo(() => {
     const today = new Date()
     const month = today.getMonth() // 0 = Jan, 11 = Dec
-    return month >= 7 && month <= 11; // October to December
+    return month >= startChristmasMonth && month <= 11; // October to December
   }, [])
 
   return (
@@ -63,7 +65,7 @@ export function HeroSection() {
         (<div className="absolute inset-0 bg-[url('/images/TestImage.jpg')] opacity-5"></div>)
       }
 
-      <MobileHero isChristmas={isChristmas}/>
+      <MobileHero startChristmasMonth={startChristmasMonth}/>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 relative hidden lg:block">
         <div className="grid lg:grid-cols-2 gap-12 items-center">

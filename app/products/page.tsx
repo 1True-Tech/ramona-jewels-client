@@ -196,7 +196,7 @@ export default function ProductsPage() {
         </motion.div>
 
         {/* Search and Controls */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+        <div className="flex flex-col lg:flex-row gap-4 mb-10">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -269,7 +269,7 @@ export default function ProductsPage() {
 
             <motion.div
               layout
-              className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}
+              className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6" : "space-y-4"}
             >
               {products.map((product, index) => (
                 <motion.div

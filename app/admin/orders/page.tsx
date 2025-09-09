@@ -31,7 +31,7 @@ import {
 
 
 export default function AdminOrdersPage() {
-  const { user } = useAuth()
+  const { user, hydrated } = useAuth()
   const router = useRouter()
   const dispatch = useAppDispatch()
   const [searchQuery, setSearchQuery] = useState("")
@@ -72,25 +72,39 @@ export default function AdminOrdersPage() {
   }
 
   const { startDate, endDate } = getDateRange(dateFilter)
+
+  const isAdmin = !!user && user.role === "admin"
+  const skipQueries = !hydrated || !isAdmin
   
   const { data: ordersResponse, isLoading: ordersLoading, error: ordersError } = useGetOrdersQuery({
      ...(searchQuery ? { search: searchQuery } : {}),
      ...(selectedStatus === "all" ? {} : { status: selectedStatus }),
      ...(startDate ? { startDate } : {}),
      ...(endDate ? { endDate } : {})
-   })
+   }, { skip: skipQueries, refetchOnMountOrArgChange: true })
    
-   const { data: statsResponse, isLoading: statsLoading } = useGetOrderStatsQuery()
+   const { data: statsResponse, isLoading: statsLoading } = useGetOrderStatsQuery(undefined, { skip: skipQueries, refetchOnMountOrArgChange: true })
    
    const orders = ordersResponse?.data || []
    const stats = statsResponse?.data
   // removed unused mutations
 
   useEffect(() => {
+    if (!hydrated) return
     if (!user || user.role !== "admin") {
       router.push("/auth/login")
     }
-  }, [user, router])
+  }, [user, hydrated, router])
+
+  if (!hydrated) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   if (!user || user.role !== "admin") {
     return null
@@ -107,10 +121,12 @@ export default function AdminOrdersPage() {
   }
 
   if (ordersError) {
+    const err: any = ordersError as any
+    const message = err?.data?.message || err?.error || 'Error loading orders. Please try again.'
     return (
       <AdminLayout>
         <div className="text-center text-red-600 p-8">
-          Error loading orders. Please try again.
+          {message}
         </div>
       </AdminLayout>
     )

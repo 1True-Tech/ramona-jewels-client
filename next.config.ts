@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
         pathname: '/uploads/**',
       },
       {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '5000',
+        pathname: '/api/v1/uploads/**',
+      },
+      {
         protocol: 'https',
         hostname: 'ramona-jewels-server.onrender.com',
         // port: '5000',
@@ -46,7 +52,11 @@ const nextConfig: NextConfig = {
         pathname: '/**'
       },
     ],
+    domains: [
+      "localhost",
+    ],
   },
+  
 };
 
 export default nextConfig;

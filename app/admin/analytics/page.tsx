@@ -14,10 +14,12 @@ import {
   useGetAnalyticsDashboardQuery,
   useGetRevenueMetricsQuery,
   useGetProductPerformanceQuery,
-  useGetCustomerInsightsQuery
+  useGetCustomerInsightsQuery,
+  type RevenueMetrics
 } from "@/store/api/analyticsApi"
 import { Loader } from "@/components/ui/loader"
-import { TrendingUp, Package, Users, ShoppingCart, DollarSign, Eye, Heart, Star } from "lucide-react"
+import { TrendingUp, Package, Users, ShoppingCart, DollarSign, Eye, Heart, Star, Clock, XCircle, CreditCard, RotateCcw } from "lucide-react"
+import { io, Socket } from 'socket.io-client'
 
 
 
@@ -26,11 +28,39 @@ export default function AdminAnalyticsPage() {
   const router = useRouter()
   const [dateRange, setDateRange] = useState({ period: 'month' as const })
 
-  // API queries with debugging
+  // Live snapshot from Socket.IO
+  const [live, setLive] = useState<any | null>(null)
+
+  // API queries with debugging (used for initial load / fallback)
   const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useGetAnalyticsDashboardQuery(dateRange)
   const { data: revenueData, isLoading: revenueLoading, error: revenueError } = useGetRevenueMetricsQuery(dateRange)
   const { data: productData, isLoading: productLoading, error: productError } = useGetProductPerformanceQuery(dateRange)
   const { data: customerData, isLoading: customerLoading, error: customerError } = useGetCustomerInsightsQuery(dateRange)
+
+  // Socket subscription for realtime analytics
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return
+
+    const socket: Socket = io(process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000', {
+      transports: ['websocket'],
+    })
+
+    socket.emit('join_analytics')
+
+    const onUpdate = (payload: any) => {
+      setLive(payload)
+    }
+
+    socket.on('analytics_update', onUpdate)
+
+    return () => {
+      try { socket.emit('leave_analytics') } catch {}
+      try {
+        socket.off('analytics_update', onUpdate)
+        socket.disconnect()
+      } catch {}
+    }
+  }, [user])
 
 
 
@@ -90,7 +120,21 @@ export default function AdminAnalyticsPage() {
       revenueGrowth: 0,
       averageOrderValue: 0,
       totalOrders: 0,
-      conversionRate: 0
+      conversionRate: 0,
+      // Payment fields fallback
+      totalPaidRevenue: 0,
+      totalPaidCount: 0,
+      pendingCount: 0,
+      failedCount: 0,
+      refundedCount: 0,
+      paidRevenueGrowth: 0,
+      paymentStatusBreakdown: [
+        { status: 'paid', amount: 0, count: 0 },
+        { status: 'pending', amount: 0, count: 0 },
+        { status: 'failed', amount: 0, count: 0 },
+        { status: 'refunded', amount: 0, count: 0 },
+      ],
+      statusTrends: { paid: 0, pending: 0, failed: 0, refunded: 0 },
     },
     customers: {
       totalCustomers: 0,
@@ -102,7 +146,7 @@ export default function AdminAnalyticsPage() {
     }
   }
 
-  const revenue = revenueData?.data || (hasError ? mockDashboard.revenue : undefined)
+  const revenue: RevenueMetrics | undefined = revenueData?.data || (hasError ? (mockDashboard.revenue as RevenueMetrics) : undefined)
   const products = productData?.data || []
   const customers = customerData?.data || (hasError ? mockDashboard.customers : undefined)
   const dashboard = dashboardData?.data || (hasError ? mockDashboard : undefined)
@@ -167,6 +211,29 @@ export default function AdminAnalyticsPage() {
     },
   ]
 
+  // Payments metrics derived from revenue metrics
+  const paidRevenue = typeof revenue?.totalPaidRevenue === 'number' ? revenue.totalPaidRevenue : 0
+  const paidOrders = typeof revenue?.totalPaidCount === 'number' ? revenue.totalPaidCount : 0
+  const pendingCount = typeof revenue?.pendingCount === 'number' ? revenue.pendingCount : 0
+  const failedCount = typeof revenue?.failedCount === 'number' ? revenue.failedCount : 0
+  const refundedCount = typeof revenue?.refundedCount === 'number' ? revenue.refundedCount : 0
+  const paidRevenueGrowth = typeof revenue?.paidRevenueGrowth === 'number' ? revenue.paidRevenueGrowth : 0
+  const statusTrends = revenue?.statusTrends ?? { paid: 0, pending: 0, failed: 0, refunded: 0 }
+  const breakdown = revenue?.paymentStatusBreakdown ?? [
+    { status: 'paid', amount: 0, count: 0 },
+    { status: 'pending', amount: 0, count: 0 },
+    { status: 'failed', amount: 0, count: 0 },
+    { status: 'refunded', amount: 0, count: 0 },
+  ]
+  const toTrend = (n: number) => (n >= 0 ? 'up' : 'down') as 'up' | 'down'
+  const fmtChange = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`
+  const paymentStats = [
+    { title: 'Total Paid', value: `$${paidRevenue.toFixed(2)}`, change: fmtChange(paidRevenueGrowth), trend: toTrend(paidRevenueGrowth), icon: CreditCard },
+    { title: 'Paid Orders', value: paidOrders.toString(), change: fmtChange(statusTrends.paid ?? 0), trend: toTrend(statusTrends.paid ?? 0), icon: ShoppingCart },
+    { title: 'Pending', value: pendingCount.toString(), change: fmtChange(statusTrends.pending ?? 0), trend: toTrend(statusTrends.pending ?? 0), icon: Clock },
+    { title: 'Failed', value: failedCount.toString(), change: fmtChange(statusTrends.failed ?? 0), trend: toTrend(statusTrends.failed ?? 0), icon: XCircle },
+  ] as const
+
   return (
     <AdminLayout>
       <div className="space-y-8">
@@ -218,6 +285,49 @@ export default function AdminAnalyticsPage() {
                 <StatsCard {...stat} />
               </motion.div>
             ))}
+          </div>
+        </motion.div>
+
+        {/* Payments */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <h2 className="text-xl font-semibold mb-4">Payments</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {paymentStats.map((stat, index) => (
+              <motion.div
+                key={stat.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + index * 0.05 }}
+              >
+                <StatsCard {...stat} />
+              </motion.div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+            <div className="bg-card rounded-lg border p-4">
+              <h3 className="font-medium mb-2">Payment Status Breakdown</h3>
+              <ul className="space-y-2">
+                {breakdown.map((b) => (
+                  <li key={b.status} className="flex items-center justify-between text-sm">
+                    <span className="capitalize">{b.status}</span>
+                    <span className="text-muted-foreground">{b.count} • ${b.amount.toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-card rounded-lg border p-4">
+              <h3 className="font-medium mb-2">Refunded</h3>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-semibold">{refundedCount}</div>
+                <div className={`text-sm ${statusTrends.refunded >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {fmtChange(statusTrends.refunded)}
+                </div>
+              </div>
+            </div>
+            <div className="bg-card rounded-lg border p-4">
+              <h3 className="font-medium mb-2">Notes</h3>
+              <p className="text-sm text-muted-foreground">Trends compare to previous period of the same length based on your selected date range.</p>
+            </div>
           </div>
         </motion.div>
 
