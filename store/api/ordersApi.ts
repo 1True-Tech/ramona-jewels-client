@@ -3,7 +3,7 @@ import type { RootState } from '../index'
 import { Order, OrderQueryParams, OrdersResponse, OrderStatsResponse, UpdateOrderStatusRequest } from '../apiTypes'
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL + '/orders',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL + '/orders/',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token
     if (token) {

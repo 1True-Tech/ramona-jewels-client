@@ -1,14 +1,14 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { RootState } from '../index'
 
-interface SalesData {
+export interface SalesData {
   date: string
   revenue: number
   orders: number
   averageOrderValue: number
 }
 
-interface ProductPerformance {
+export interface ProductPerformance {
   id: string
   name: string
   category: string
@@ -25,14 +25,14 @@ interface ProductPerformance {
   conversionRate?: number
 }
 
-interface CategoryPerformance {
+export interface CategoryPerformance {
   category: string
   totalSold: number
   totalRevenue: number
   productCount: number
 }
 
-interface CustomerInsights {
+export interface CustomerInsights {
   totalCustomers: number
   newCustomers: number
   // Detailed insights from backend
@@ -58,7 +58,7 @@ interface CustomerInsights {
 }
 
 // Summary metrics used on dashboard
-interface RevenueMetrics {
+export interface RevenueMetrics {
   totalRevenue: number
   totalOrders: number
   averageOrderValue: number
@@ -71,9 +71,18 @@ interface RevenueMetrics {
   totalShipping?: number
   totalTax?: number
   totalDiscount?: number
+  // Added: payment status breakdown and trends
+  totalPaidRevenue?: number
+  totalPaidCount?: number
+  pendingCount?: number
+  failedCount?: number
+  refundedCount?: number
+  paidRevenueGrowth?: number
+  paymentStatusBreakdown?: { status: 'paid' | 'pending' | 'failed' | 'refunded'; amount: number; count: number }[]
+  statusTrends?: { paid: number; pending: number; failed: number; refunded: number }
 }
 
-interface InventoryInsights {
+export interface InventoryInsights {
   totalProducts: number
   lowStockProducts: number
   outOfStockProducts: number
@@ -81,7 +90,7 @@ interface InventoryInsights {
   slowMovingProducts: ProductPerformance[]
 }
 
-interface TrafficData {
+export interface TrafficData {
   date: string
   visitors: number
   pageViews: number
@@ -89,7 +98,7 @@ interface TrafficData {
   sessionDuration: number
 }
 
-interface AnalyticsDashboard {
+export interface AnalyticsDashboard {
   revenue: RevenueMetrics
   sales: SalesData[]
   customers: CustomerInsights
@@ -99,19 +108,19 @@ interface AnalyticsDashboard {
   traffic: TrafficData[]
 }
 
-interface AnalyticsResponse {
+export interface AnalyticsResponse {
   success: boolean
   data: AnalyticsDashboard
 }
 
-interface DateRangeParams {
+export interface DateRangeParams {
   startDate?: string
   endDate?: string
   period?: 'day' | 'week' | 'month' | 'year' | 'daily' | 'weekly' | 'monthly' | 'hourly'
 }
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL + '/admin',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL + '/admin/',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token
     if (token) {

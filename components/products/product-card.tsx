@@ -130,7 +130,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {product.badge && <Badge className="text-xs gradient-primary text-white border-0">{product.badge}</Badge>}
             {discount > 0 && (
-              <Badge variant="destructive" className="text-xs bg-red-400">
+              <Badge variant="destructive" className="text-xs bg-red-400 border-none ">
                 -{discount}%
               </Badge>
             )}

@@ -163,7 +163,7 @@ export default function CategoriesPage() {
       refetchTypes()
       refetchCategories()
     } catch (error: any) {
-      dispatch(showModal({ type: 'error', title: 'Error', message: error.data?.message || 'Failed to delete product type.' }))
+      dispatch(showModal({ type: 'error', title: 'Error', message: error.data?.message || error.data?.error || 'Failed to delete product type.' }))
     }
   }
 
