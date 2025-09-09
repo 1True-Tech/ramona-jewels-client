@@ -111,7 +111,7 @@ interface DateRangeParams {
 }
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL + '/admin',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL + '/admin/',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token
     if (token) {
