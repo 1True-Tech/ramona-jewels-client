@@ -199,7 +199,7 @@ export default function AdminUsersPage() {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {topUsers.map((topUser, index) => (
                 <div key={topUser.id} className="bg-muted/50 rounded-lg p-4 text-center">
                   <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted mx-auto mb-2">
