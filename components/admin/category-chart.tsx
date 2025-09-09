@@ -5,13 +5,15 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useGetCategoryPerformanceQuery } from "@/store/api/analyticsApi"
 
-// Category color palette
-const categoryColors: Record<string, string> = {
-  Floral: "#8B5CF6",
-  Oriental: "#EC4899",
-  Woody: "#F59E0B",
-  Citrus: "#10B981",
-  Aquatic: "#3B82F6",
+// Generate a deterministic HSL color from a string (category name)
+function stringToHslColor(str: string, s = 65, l = 50) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    hash |= 0 // Convert to 32bit integer
+  }
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, ${s}%, ${l}%)`
 }
 
 // Array for months (0-based for Date API)
@@ -63,7 +65,7 @@ export function CategoryChart() {
     return list.map((item) => ({
       name: item.category,
       value: item.totalSold,
-      color: categoryColors[item.category] ?? "#8884d8",
+      color: stringToHslColor(item.category),
     }))
   }, [data])
 
