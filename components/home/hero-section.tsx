@@ -12,7 +12,7 @@ import { useMemo } from "react"
 
 export function HeroSection() {
 
-  const startChristmasMonth = 7
+  const startChristmasMonth = 9 //set your preferred month to start christmas sales
   const isChristmas = useMemo(() => {
     const today = new Date()
     const month = today.getMonth() // 0 = Jan, 11 = Dec
