@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
@@ -28,59 +28,76 @@ import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 import { useAppDispatch } from "@/store/hooks"
 import { showModal } from "@/store/slices/uiSlice"
+// import { OrderTracking } from "@/components/orders/order-tracking"
+import { useGetOrderQuery, ordersApi } from "@/store/api/ordersApi"
+import { io, Socket } from "socket.io-client"
 import { OrderTracking } from "@/components/orders/order-tracking"
-
-interface Order {
-  id: string
-  items: any[]
-  shipping: any
-  payment: any
-  shippingMethod: string
-  subtotal: number
-  shippingCost: number
-  tax: number
-  total: number
-  status: string
-  estimatedDelivery: Date
-  createdAt: Date
-}
 
 export default function OrderDetailPage() {
   const router = useRouter()
   const params = useParams()
   const dispatch = useAppDispatch()
   const orderId = params.id as string
-  
-  const [order, setOrder] = useState<Order | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+
+  // API state
+  const { data, isLoading } = useGetOrderQuery(orderId, { skip: !orderId })
+  const order: any = (data as any)?.data
+
+  // Realtime socket
+  const socketRef = useRef<Socket | null>(null)
   const [copied, setCopied] = useState(false)
 
+  // Guard when no id
   useEffect(() => {
     if (!orderId) {
       router.push('/orders')
-      return
     }
-
-    // Get order from localStorage (in real app, this would be fetched from backend)
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]')
-    const foundOrder = orders.find((o: Order) => o.id === orderId)
-    
-    if (!foundOrder) {
-      router.push('/orders')
-      return
-    }
-
-    setOrder({
-      ...foundOrder,
-      estimatedDelivery: new Date(foundOrder.estimatedDelivery),
-      createdAt: new Date(foundOrder.createdAt)
-    })
-    setIsLoading(false)
   }, [orderId, router])
+
+  // Socket realtime subscription
+  useEffect(() => {
+    if (!orderId) return
+    const base = (process.env.NEXT_PUBLIC_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || '')
+      .replace(/\/api\/v1\/?$/, '')
+      .replace(/\/$/, '')
+    if (!base) return
+
+    const socket = io(base, { transports: ['websocket'], autoConnect: true })
+    socketRef.current = socket
+
+    socket.on('connect', () => {
+      socket.emit('join_order', orderId)
+    })
+
+    const onUpdate = (payload: { orderId: string; paymentStatus?: string; status?: string }) => {
+      if (!payload) return
+      try {
+        // Update query cache
+        // @ts-ignore
+        dispatch(
+          ordersApi.util.updateQueryData('getOrder', orderId, (draft: any) => {
+            if (!draft?.data) return
+            if (payload.status) draft.data.status = payload.status
+            if (payload.paymentStatus) draft.data.paymentStatus = payload.paymentStatus
+          })
+        )
+      } catch {}
+    }
+
+    socket.on('order_payment_update', onUpdate)
+    socket.on('order:payment_update', onUpdate)
+
+    return () => {
+      try { socket.emit('leave_order', orderId) } catch {}
+      socket.off('order_payment_update', onUpdate)
+      socket.off('order:payment_update', onUpdate)
+      socket.disconnect()
+      socketRef.current = null
+    }
+  }, [orderId, dispatch])
 
   const copyOrderId = async () => {
     if (!order) return
-    
     try {
       await navigator.clipboard.writeText(order.id)
       setCopied(true)
@@ -100,7 +117,7 @@ export default function OrderDetailPage() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch ((status || '').toLowerCase()) {
       case 'confirmed':
         return 'bg-green-100 text-green-800 border-green-200'
       case 'processing':
@@ -117,7 +134,7 @@ export default function OrderDetailPage() {
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch ((status || '').toLowerCase()) {
       case 'confirmed':
         return <CheckCircle className="h-4 w-4" />
       case 'processing':
@@ -131,21 +148,8 @@ export default function OrderDetailPage() {
     }
   }
 
-  const getShippingMethodName = (method: string) => {
-    switch (method) {
-      case 'express': return 'Express Shipping'
-      case 'overnight': return 'Overnight Shipping'
-      default: return 'Standard Shipping'
-    }
-  }
-
-  const getDeliveryTime = (method: string) => {
-    switch (method) {
-      case 'express': return '2-3 business days'
-      case 'overnight': return '1 business day'
-      default: return '5-7 business days'
-    }
-  }
+  const createdAtDate = order?.createdAt ? new Date(order.createdAt) : null
+  const estimatedDeliveryDate = order?.estimatedDelivery ? new Date(order.estimatedDelivery) : null
 
   if (isLoading) {
     return (
@@ -187,7 +191,7 @@ export default function OrderDetailPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-10">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
@@ -222,7 +226,7 @@ export default function OrderDetailPage() {
                 </Button>
               </div>
               <div className="text-sm text-muted-foreground">
-                Placed on {order.createdAt.toLocaleDateString()} at {order.createdAt.toLocaleTimeString()}
+                Placed on {createdAtDate ? createdAtDate.toLocaleDateString() : '—'} at {createdAtDate ? createdAtDate.toLocaleTimeString() : '—'}
               </div>
             </div>
             <Badge className={`${getStatusColor(order.status)} text-sm`}>
@@ -244,16 +248,16 @@ export default function OrderDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Order Items</CardTitle>
-                  <CardDescription>{order.items.length} item(s)</CardDescription>
+                  <CardDescription>{order.items?.length || 0} item(s)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {order.items.map((item, index) => (
+                    {(order.items || []).map((item: any, index: number) => (
                       <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                         <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted">
                           <Image 
                             src={item.image || "/images/TestImage.jpg"} 
-                            alt={item.name} 
+                            alt={item.name || 'Item'} 
                             fill 
                             className="object-cover" 
                           />
@@ -267,8 +271,8 @@ export default function OrderDetailPage() {
                           <div className="text-sm">Quantity: {item.quantity}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold">${(item.price * item.quantity).toFixed(2)}</div>
-                          <div className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</div>
+                          <div className="font-semibold">${((item.price || 0) * (item.quantity || 0)).toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">${(item.price || 0).toFixed(2)} each</div>
                         </div>
                       </div>
                     ))}
@@ -298,16 +302,16 @@ export default function OrderDetailPage() {
                         Shipping Address
                       </h4>
                       <div className="text-sm text-muted-foreground space-y-1 pl-6">
-                        <div>{order.shipping.firstName} {order.shipping.lastName}</div>
-                        <div>{order.shipping.address}</div>
-                        <div>{order.shipping.city}, {order.shipping.state} {order.shipping.zipCode}</div>
+                        <div>{order.shipping?.firstName} {order.shipping?.lastName}</div>
+                        <div>{order.shipping?.address}</div>
+                        <div>{order.shipping?.city}{order.shipping?.state ? `, ${order.shipping?.state}` : ''} {order.shipping?.zipCode}</div>
                         <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
-                          {order.shipping.phone}
+                          {order.shipping?.phone}
                         </div>
                         <div className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
-                          {order.shipping.email}
+                          {order.shipping?.email}
                         </div>
                       </div>
                     </div>
@@ -320,10 +324,9 @@ export default function OrderDetailPage() {
                       <div className="text-sm text-muted-foreground space-y-1 pl-6">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-3 w-3" />
-                          <span>Estimated delivery: {order.estimatedDelivery.toLocaleDateString()}</span>
+                          <span>Estimated delivery: {estimatedDeliveryDate ? estimatedDeliveryDate.toLocaleDateString() : '—'}</span>
                         </div>
-                        <div>{getShippingMethodName(order.shippingMethod)}</div>
-                        <div>{getDeliveryTime(order.shippingMethod)}</div>
+                        {order.trackingNumber && <div>Tracking: {order.trackingNumber}</div>}
                       </div>
                     </div>
                   </div>
@@ -348,9 +351,12 @@ export default function OrderDetailPage() {
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                     <CreditCard className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <div className="font-medium">Credit Card</div>
+                      <div className="font-medium">Payment</div>
                       <div className="text-sm text-muted-foreground">
-                        {order.payment.cardNumber}
+                        Method: {order.paymentMethod || '—'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Status: <span className="capitalize">{order.paymentStatus || '—'}</span>
                       </div>
                     </div>
                   </div>
@@ -364,7 +370,12 @@ export default function OrderDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <OrderTracking orderId={order.id} />
+              <OrderTracking 
+                status={order.status}
+                trackingNumber={order.trackingNumber}
+                estimatedDelivery={order.estimatedDelivery}
+                updatedAt={order.updatedAt || order.createdAt}
+              />
             </motion.div>
           </div>
 
@@ -384,20 +395,20 @@ export default function OrderDetailPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>${order.subtotal.toFixed(2)}</span>
+                    <span>${Number(order.subtotal || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Shipping</span>
-                    <span>{order.shippingCost === 0 ? 'Free' : `$${order.shippingCost.toFixed(2)}`}</span>
+                    <span>{Number(order.shippingCost || 0) === 0 ? 'Free' : `$${Number(order.shippingCost || 0).toFixed(2)}`}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Tax</span>
-                    <span>${order.tax.toFixed(2)}</span>
+                    <span>${Number(order.tax || 0).toFixed(2)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-semibold">
                     <span>Total</span>
-                    <span>${order.total.toFixed(2)}</span>
+                    <span>${Number(order.total || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>

@@ -118,17 +118,17 @@ export function HeroSection() {
               transition={{ delay: 0.5 }}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <Link href="/jewelry">
+              <Link href="/products">
                 <Button
                   size="lg"
                   className="group gradient-primary text-white border-0 hover:opacity-90 transition-opacity"
                 >
                   <Gem className="mr-2 h-4 w-4" />
-                  Explore Jewelry
+                  Explore Products
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
-              <Link href="/perfumes">
+              <Link href="">
                 <Button variant="outline" size="lg" className={`bg-transparent ${isChristmas ? "text-black border-2 border-black" : "text-black border-primary/20 hover:bg-primary/5"}`}>
                   <Sparkles className="mr-2 h-4 w-4" />
                   Shop Fragrances

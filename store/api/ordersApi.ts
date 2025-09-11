@@ -50,6 +50,20 @@ export const ordersApi = createApi({
       },
       providesTags: ['Orders'],
     }),
+
+    // Get my orders with pagination and filtering
+    getMyOrders: builder.query<OrdersResponse, OrderQueryParams | void>({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams()
+        Object.entries(params ?? {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            searchParams.append(key, String(value))
+          }
+        })
+        return `my-orders?${searchParams.toString()}`
+      },
+      providesTags: ['Orders'],
+    }),
     
     // Get order statistics
     getOrderStats: builder.query<OrderStatsResponse, void>({
@@ -117,6 +131,7 @@ export const ordersApi = createApi({
 
 export const {
   useGetOrdersQuery,
+  useGetMyOrdersQuery,
   useGetOrderStatsQuery,
   useGetOrderQuery,
   useCreateStripePaymentIntentMutation,

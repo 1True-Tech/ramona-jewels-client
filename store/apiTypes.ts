@@ -124,6 +124,7 @@ export interface OrderItem {
   
   export interface Order {
     id: string
+    orderId: string
     userId: string
     customerName: string
     customerEmail: string
