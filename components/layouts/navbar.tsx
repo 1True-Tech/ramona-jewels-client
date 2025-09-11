@@ -188,7 +188,7 @@ export function Navbar() {
                     onClick={() => setIsOpen(false)}
                   >
                     <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4" />
+                      <Handbag className="h-4 w-4" />
                       Orders
                     </div>
                   </Link>
