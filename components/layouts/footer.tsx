@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Facebook, Twitter, Instagram, Youtube, Gem, Sparkles, Mail, Phone, MapPin } from "lucide-react"
+import { Facebook, Twitter, Instagram, Youtube, Gem, Sparkles, Mail, Phone, MapPin, Activity, ShieldCheck, Truck, RefreshCw } from "lucide-react"
 
 export function Footer() {
   const footerLinks = {
@@ -39,6 +39,37 @@ export function Footer() {
   return (
     <footer className="bg-gradient-to-br from-[#fffdf9] to-[#fffdfa] border-t border-primary mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Value Props: Reflect unique features implemented */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          <Link href="/orders" aria-label="Real-time order updates" className="group flex items-center gap-3 p-4 rounded-lg border bg-white/50 hover:bg-primary/5 transition-colors">
+            <Activity className="h-5 w-5 text-primary" />
+            <div>
+              <div className="font-medium">Real-time order updates</div>
+              <div className="text-xs text-muted-foreground">Track your order status live</div>
+            </div>
+          </Link>
+          <Link href="/checkout" aria-label="Secure payments powered by Stripe" className="group flex items-center gap-3 p-4 rounded-lg border bg-white/50 hover:bg-primary/5 transition-colors">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <div>
+              <div className="font-medium">Secure Stripe checkout</div>
+              <div className="text-xs text-muted-foreground">Pay safely with cards via Stripe</div>
+            </div>
+          </Link>
+          <Link href="/shipping" aria-label="Fast, reliable shipping" className="group flex items-center gap-3 p-4 rounded-lg border bg-white/50 hover:bg-primary/5 transition-colors">
+            <Truck className="h-5 w-5 text-primary" />
+            <div>
+              <div className="font-medium">Fast & reliable shipping</div>
+              <div className="text-xs text-muted-foreground">Worldwide delivery options</div>
+            </div>
+          </Link>
+          <Link href="/returns" aria-label="Easy returns and refunds" className="group flex items-center gap-3 p-4 rounded-lg border bg-white/50 hover:bg-primary/5 transition-colors">
+            <RefreshCw className="h-5 w-5 text-primary" />
+            <div>
+              <div className="font-medium">Easy returns & refunds</div>
+              <div className="text-xs text-muted-foreground">Hassle-free, transparent policy</div>
+            </div>
+          </Link>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2 space-y-4">

@@ -298,11 +298,11 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen bg-background">
       <Navbar />
       <MobileNav />
       
-      <div className="container mx-auto px-4 pt-24 pb-16">
+      <div className="container mx-auto pt-7 pb-20">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
@@ -325,7 +325,7 @@ export default function CheckoutPage() {
           <div className="flex items-center justify-center mb-8">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+                <div className={`flex items-center justify-center w-7 h-7 md:w-10 md:h-10 rounded-full border-2 ${
                   currentStep >= step.id 
                     ? 'bg-primary border-primary text-primary-foreground' 
                     : 'border-muted-foreground text-muted-foreground'
@@ -336,13 +336,13 @@ export default function CheckoutPage() {
                     <step.icon className="h-5 w-5" />
                   )}
                 </div>
-                <span className={`ml-2 text-sm font-medium ${
+                <span className={`pl-2 text-sm font-medium ${
                   currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
                   {step.name}
                 </span>
                 {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-4 ${
+                  <div className={`md:w-16 h-0.5 mx-4 ${
                     currentStep > step.id ? 'bg-primary' : 'bg-muted'
                   }`} />
                 )}
@@ -352,7 +352,7 @@ export default function CheckoutPage() {
         </motion.div>
 
         {/* Checkout Content */}
-        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-ful md:max-w-7xl mx-auto">
           <div className="lg:col-span-2">
             <AnimatePresence mode="wait">
               {/* Step 1: Shipping */}              
@@ -421,14 +421,14 @@ export default function CheckoutPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex gap-4">
+                      <div className="flex flex-col md:flex-row gap-4">
                         <Link href="/cart" className="flex-1">
                           <Button variant="outline" className="w-full">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Cart
                           </Button>
                         </Link>
-                        <Button className="flex-1" onClick={handleShippingSubmit} disabled={isLoading}>
+                        <Button className="flex" onClick={handleShippingSubmit} disabled={isLoading}>
                           {isLoading ? 'Preparing Payment...' : 'Continue to Payment'}
                           <ArrowRight className="h-4 w-4 ml-2" />
                         </Button>
@@ -563,8 +563,7 @@ function StripePaymentForm({ paymentInfo, setPaymentInfo, onBack, onNext }: any)
           </div>
         </div>
 
-        {/* Billing Address (existing code unchanged) */}
-        {/* ... */}
+        {/* Billing Address */}
         <div className="space-y-4">
           <div>
             <Label>Cardholder Name</Label>
@@ -626,7 +625,7 @@ function StripePaymentForm({ paymentInfo, setPaymentInfo, onBack, onNext }: any)
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
           <Button variant="outline" onClick={onBack} className="flex-1">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Shipping
@@ -683,7 +682,7 @@ function StripeOrderReview({ order, onBack, onSubmit, isLoading }: any) {
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
           <Button variant="outline" onClick={onBack} className="flex-1">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Payment
