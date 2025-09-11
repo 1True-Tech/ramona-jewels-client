@@ -47,6 +47,8 @@ export default function AdminOrderDetailPage() {
   })
   const order: any = (data as any)?.data
 
+  console.log(order)
+
   const [showStatusForm, setShowStatusForm] = useState(false)
   const [statusValue, setStatusValue] = useState<string>(order?.status || 'pending')
   const [trackingValue, setTrackingValue] = useState<string>(order?.trackingNumber || '')
@@ -211,7 +213,7 @@ export default function AdminOrderDetailPage() {
         >
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold">Order {order.id}</h1>
+              <h1 className="text-md md:text-2xl font-bold line-clamp-1">Order {order.id}</h1>
               <div className="flex items-center gap-4 mt-2">
                 <Badge className={getStatusColor(order.status)}>
                   {getStatusIcon(order.status)}
@@ -304,7 +306,7 @@ export default function AdminOrderDetailPage() {
                       {order.items.map((item) => (
                         <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                           <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                            <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                            <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" unoptimized/>
                           </div>
                           <div className="flex-1">
                             <Link href={`/products/${item.productId}`} className="font-medium hover:text-primary">
