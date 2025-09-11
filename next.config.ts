@@ -56,7 +56,13 @@ const nextConfig: NextConfig = {
       "localhost",
     ],
   },
-  
+  async rewrites() {
+    const server = process.env.NEXT_PUBLIC_SERVER_URL
+    return [
+      { source: '/uploads/:path*', destination: `${server}/uploads/:path*` },
+      { source: '/api/v1/uploads/:path*', destination: `${server}/api/v1/uploads/:path*` },
+    ]
+  },
 };
 
 export default nextConfig;

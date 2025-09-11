@@ -240,6 +240,7 @@ export default function OrdersPage() {
                                 alt={item.name} 
                                 fill 
                                 className="object-cover" 
+                                loading="lazy"
                               />
                             </div>
                             <div className="flex-1 min-w-0">
