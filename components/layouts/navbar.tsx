@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingCart, User, Menu, X, Heart, Gem, Package } from "lucide-react"
+import { Search, ShoppingCart, User, Menu, X, Heart, Gem, Handbag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -78,7 +78,7 @@ export function Navbar() {
             {/* Wishlist */}
             <Link href="/wishlist">
               <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">
-                <Heart className="h-5 w-5" />
+                <Heart className="h-8 w-8" />
                 {wishlistState.itemCount > 0 && (
                   <Badge className="absolute -top-1 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs gradient-primary text-white border-0">
                     {wishlistState.itemCount}
@@ -103,7 +103,7 @@ export function Navbar() {
             {user && (
               <Link href="/orders" className="hidden lg:block">
                 <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                  <Package className="h-5 w-5" />
+                  <Handbag className="h-5 w-5" />
                 </Button>
               </Link>
             )}

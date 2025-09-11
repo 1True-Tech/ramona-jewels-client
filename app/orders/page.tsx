@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
@@ -23,59 +23,32 @@ import {
 import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 import { useAuth } from "@/contexts/redux-auth-context"
-import { useOrderTracking } from "@/contexts/order-tracking-context"
-
-interface Order {
-  id: string
-  items: any[]
-  shipping: any
-  payment: any
-  shippingMethod: string
-  subtotal: number
-  shippingCost: number
-  tax: number
-  total: number
-  status: string
-  estimatedDelivery: Date
-  createdAt: Date
-}
+import { useGetMyOrdersQuery } from "@/store/api/ordersApi"
+import type { Order as ApiOrder } from "@/store/apiTypes"
 
 export default function OrdersPage() {
   const { user } = useAuth()
-  const { getOrderTracking } = useOrderTracking()
-  const [orders, setOrders] = useState<Order[]>([])
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    // Get orders from localStorage (in real app, this would be fetched from backend)
-    const storedOrders = JSON.parse(localStorage.getItem('orders') || '[]')
-    const parsedOrders = storedOrders.map((order: any) => ({
-      ...order,
-      estimatedDelivery: new Date(order.estimatedDelivery),
-      createdAt: new Date(order.createdAt)
-    }))
-    
-    setOrders(parsedOrders)
-    setFilteredOrders(parsedOrders)
-    setIsLoading(false)
-  }, [])
+  const { data, isLoading, isError } = useGetMyOrdersQuery(undefined, {
+    skip: !user, // don't fetch if not authenticated
+  })
 
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = orders.filter(order => 
-        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.items.some(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-      setFilteredOrders(filtered)
-    } else {
-      setFilteredOrders(orders)
-    }
-  }, [searchTerm, orders])
+  const orders: ApiOrder[] = data?.data ?? []
+
+  const filteredOrders = useMemo(() => {
+    if (!searchTerm) return orders
+    const term = searchTerm.toLowerCase()
+    return orders.filter((order) =>
+      order.id.toLowerCase().includes(term) ||
+      order.items.some((item) => item.name.toLowerCase().includes(term))
+    )
+  }, [orders, searchTerm])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
       case 'confirmed':
         return 'bg-green-100 text-green-800 border-green-200'
       case 'processing':
@@ -93,6 +66,8 @@ export default function OrdersPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
+      case 'pending':
+        return <Clock className="h-4 w-4" />
       case 'confirmed':
         return <CheckCircle className="h-4 w-4" />
       case 'processing':
@@ -106,12 +81,21 @@ export default function OrdersPage() {
     }
   }
 
-  const getShippingMethodName = (method: string) => {
-    switch (method) {
-      case 'express': return 'Express Shipping'
-      case 'overnight': return 'Overnight Shipping'
-      default: return 'Standard Shipping'
-    }
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-16">
+            <h2 className="text-2xl font-semibold mb-4">Please sign in to view your orders</h2>
+            <Link href="/auth/login">
+              <Button size="lg">Sign In</Button>
+            </Link>
+          </div>
+        </div>
+        <MobileNav />
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -130,18 +114,33 @@ export default function OrdersPage() {
     )
   }
 
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-16">
+            <h2 className="text-2xl font-semibold mb-4">Unable to load your orders</h2>
+            <p className="text-muted-foreground">Please try again later.</p>
+          </div>
+        </div>
+        <MobileNav />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-10">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold mb-2">Your Orders</h1>
+          <h1 className="text-xl md:text-3xl font-bold mb-2">Your Orders</h1>
           <p className="text-muted-foreground">
             {orders.length === 0 ? "No orders yet" : `${orders.length} order${orders.length === 1 ? '' : 's'} found`}
           </p>
@@ -200,39 +199,24 @@ export default function OrdersPage() {
                         <div>
                           <CardTitle className="flex items-center gap-2">
                             <span>Order {order.id}</span>
-                            {(() => {
-                              const tracking = getOrderTracking(order.id)
-                              const currentStatus = tracking?.currentStatus || order.status
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <Badge className={getStatusColor(currentStatus)}>
-                                    {getStatusIcon(currentStatus)}
-                                    <span className="ml-1 capitalize">{currentStatus.replace('_', ' ')}</span>
-                                  </Badge>
-                                  {tracking?.isRealTimeEnabled && (
-                                    <div className="flex items-center gap-1 text-xs text-green-600">
-                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                      Live
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })()}
+                            <div className="flex items-center gap-2">
+                              <Badge className={getStatusColor(order.status)}>
+                                {getStatusIcon(order.status)}
+                                <span className="ml-1 capitalize">{order.status.replace('_', ' ')}</span>
+                              </Badge>
+                            </div>
                           </CardTitle>
                           <CardDescription className="flex items-center gap-4 mt-2">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              Placed on {order.createdAt.toLocaleDateString()}
+                              Placed on {new Date(order.createdAt).toLocaleDateString()}
                             </span>
                             <span>${order.total.toFixed(2)}</span>
-                            {(() => {
-                              const tracking = getOrderTracking(order.id)
-                              return tracking?.trackingNumber && (
-                                <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                                  {tracking.trackingNumber}
-                                </span>
-                              )
-                            })()}
+                            {order.trackingNumber && (
+                              <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                                {order.trackingNumber}
+                              </span>
+                            )}
                           </CardDescription>
                         </div>
                         <div className="flex gap-2">
@@ -283,20 +267,26 @@ export default function OrdersPage() {
                         <div>
                           <div className="font-medium mb-1">Shipping Address</div>
                           <div className="text-muted-foreground">
-                            {order.shipping.firstName} {order.shipping.lastName}<br />
-                            {order.shipping.city}, {order.shipping.state}
+                            {order.shippingAddress?.name || 'N/A'}<br />
+                            {order.shippingAddress?.city || 'N/A'}, {order.shippingAddress?.state || ''}
                           </div>
                         </div>
                         <div>
-                          <div className="font-medium mb-1">Shipping Method</div>
-                          <div className="text-muted-foreground">
-                            {getShippingMethodName(order.shippingMethod)}
+                          <div className="font-medium mb-1">Payment Status</div>
+                          <div className="text-muted-foreground capitalize">
+                            {order.paymentStatus || 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-medium mb-1">Payment Method</div>
+                          <div className="text-muted-foreground capitalize">
+                            {order.paymentMethod || 'N/A'}
                           </div>
                         </div>
                         <div>
                           <div className="font-medium mb-1">Estimated Delivery</div>
                           <div className="text-muted-foreground">
-                            {order.estimatedDelivery.toLocaleDateString()}
+                            {order && (order as any).estimatedDelivery ? new Date((order as any).estimatedDelivery as any).toLocaleDateString() : (order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A')}
                           </div>
                         </div>
                       </div>

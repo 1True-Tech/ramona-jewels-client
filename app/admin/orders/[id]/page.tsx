@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef } from "react"
+import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -27,129 +27,146 @@ import {
   Printer,
   Download
 } from "lucide-react"
+import { useGetOrderQuery, useUpdateOrderStatusMutation } from "@/store/api/ordersApi"
+import { io, Socket } from "socket.io-client"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
-// Mock order data aligned with Order/OrderItem shape
-const mockOrder = {
-  id: "ORD-001",
-  customerName: "Alice Johnson",
-  customerEmail: "alice@example.com",
-  customerPhone: "+1 (555) 123-4567",
-  date: "2024-03-15",
-  status: "delivered",
-  total: 299.99,
-  subtotal: 299.99,
-  shipping: 0,
-  tax: 0,
-  discount: 0,
-  items: [
-    {
-      id: "1",
-      productId: "1",
-      name: "Midnight Rose",
-      image: "/placeholder.svg",
-      quantity: 1,
-      price: 149.99,
-      type: "perfume",
-      category: "Floral",
-    },
-    {
-      id: "2",
-      productId: "2",
-      name: "Ocean Breeze",
-      image: "/placeholder.svg",
-      quantity: 1,
-      price: 150.0,
-      type: "perfume",
-      category: "Aquatic",
-    },
-  ],
-  shippingAddress: {
-    name: "Alice Johnson",
-    street: "123 Main Street",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "United States",
-  },
-  billingAddress: {
-    name: "Alice Johnson",
-    street: "123 Main Street",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "United States",
-  },
-  paymentMethod: "Credit Card ending in 4242",
-  trackingNumber: "1Z999AA1234567890",
-  notes: "Please handle with care",
-}
 
-// Mock order timeline
-const orderTimeline = [
-  {
-    status: "Order Placed",
-    date: "2024-03-15 10:30 AM",
-    description: "Order was successfully placed",
-    completed: true,
-  },
-  {
-    status: "Payment Confirmed",
-    date: "2024-03-15 10:32 AM",
-    description: "Payment processed successfully",
-    completed: true,
-  },
-  {
-    status: "Processing",
-    date: "2024-03-15 2:00 PM",
-    description: "Order is being prepared",
-    completed: true,
-  },
-  {
-    status: "Shipped",
-    date: "2024-03-16 9:00 AM",
-    description: "Order has been shipped",
-    completed: true,
-  },
-  {
-    status: "Delivered",
-    date: "2024-03-18 3:45 PM",
-    description: "Order delivered successfully",
-    completed: true,
-  },
-]
 
 export default function AdminOrderDetailPage() {
-  const { user } = useAuth()
-  const router = useRouter()
-  // removed unused: const params = useParams()
-  const [order] = useState(mockOrder)
+  const { user, hydrated } = useAuth()
+   const router = useRouter()
+  const params = useParams()
+  const orderId = (params as any)?.id as string
+  const isAdmin = !!user && user.role === "admin"
+
+  const { data, isLoading, error, refetch } = useGetOrderQuery(orderId, {
+    skip: !hydrated || !isAdmin || !orderId,
+    refetchOnMountOrArgChange: true,
+  })
+  const order: any = (data as any)?.data
+
+  const [showStatusForm, setShowStatusForm] = useState(false)
+  const [statusValue, setStatusValue] = useState<string>(order?.status || 'pending')
+  const [trackingValue, setTrackingValue] = useState<string>(order?.trackingNumber || '')
+  const [notesValue, setNotesValue] = useState<string>(order?.notes || '')
+  const [updateOrderStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
 
   useEffect(() => {
+    setStatusValue(order?.status || 'pending')
+    setTrackingValue(order?.trackingNumber || '')
+    setNotesValue(order?.notes || '')
+  }, [order?.status, order?.trackingNumber, order?.notes])
+
+  const socketRef = useRef<Socket | null>(null)
+
+   useEffect(() => {
+    if (!hydrated) return
     if (!user || user.role !== "admin") {
       router.push("/auth/login")
     }
-  }, [user, router])
+  }, [user, hydrated, router])
+
+  // Realtime subscription for this order
+  useEffect(() => {
+    if (!orderId) return
+    const base = (process.env.NEXT_PUBLIC_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || '')
+      .replace(/\/api\/v1\/?$/, '')
+      .replace(/\/$/, '')
+    if (!base) return
+
+    const socket = io(base, { transports: ['websocket'], autoConnect: true })
+    socketRef.current = socket
+
+    socket.on('connect', () => {
+      socket.emit('join_order', orderId)
+    })
+
+    const onUpdate = () => {
+      try { refetch() } catch {}
+    }
+
+    socket.on('order_payment_update', onUpdate)
+    socket.on('order:payment_update', onUpdate)
+
+    return () => {
+      try { socket.emit('leave_order', orderId) } catch {}
+      socket.off('order_payment_update', onUpdate)
+      socket.off('order:payment_update', onUpdate)
+      socket.disconnect()
+      socketRef.current = null
+    }
+  }, [orderId, refetch])
+
+  const onSubmitStatus = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!order) return
+    try {
+      await updateOrderStatus({
+        id: order.id,
+        status: statusValue,
+        ...(trackingValue ? { trackingNumber: trackingValue } : {}),
+        ...(notesValue ? { notes: notesValue } : {}),
+      }).unwrap()
+      setShowStatusForm(false)
+      refetch()
+    } catch (_) {
+      // handled globally by baseQueryWithModal
+    }
+  }
+ 
+  if (!hydrated) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   if (!user || user.role !== "admin") {
+    router.push("/auth/login")
     return null
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "delivered":
-        return "text-green-600 bg-green-100 dark:bg-green-900/20"
-      case "shipped":
-        return "text-blue-600 bg-blue-100 dark:bg-blue-900/20"
-      case "processing":
-        return "text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20"
-      case "pending":
-        return "text-orange-600 bg-orange-100 dark:bg-orange-900/20"
-      case "cancelled":
-        return "text-red-600 bg-red-100 dark:bg-red-900/20"
-      default:
-        return "text-gray-600 bg-gray-100 dark:bg-gray-900/20"
-    }
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    )
   }
+
+  if (error || !order) {
+    const err: any = error as any
+    const message = err?.data?.message || err?.error || 'Order not found or failed to load.'
+    return (
+      <AdminLayout>
+        <div className="text-center text-red-600 p-8">{message}</div>
+      </AdminLayout>
+    )
+  }
+ 
+   const getStatusColor = (status: string) => {
+     switch (status) {
+       case "delivered":
+         return "text-green-600 bg-green-100 dark:bg-green-900/20"
+       case "shipped":
+         return "text-blue-600 bg-blue-100 dark:bg-blue-900/20"
+       case "processing":
+         return "text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20"
+       case "pending":
+         return "text-orange-600 bg-orange-100 dark:bg-orange-900/20"
+       case "cancelled":
+         return "text-red-600 bg-red-100 dark:bg-red-900/20"
+       default:
+         return "text-gray-600 bg-gray-100 dark:bg-gray-900/20"
+     }
+   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -201,7 +218,7 @@ export default function AdminOrderDetailPage() {
                   <span className="ml-1 capitalize">{order.status}</span>
                 </Badge>
                 <span className="text-muted-foreground">
-                  Placed on {new Date(order.date).toLocaleDateString()}
+                  Placed on {new Date(order.createdAt).toLocaleDateString()}
                 </span>
               </div>
             </div>
@@ -214,25 +231,67 @@ export default function AdminOrderDetailPage() {
                 <Download className="h-4 w-4 mr-2" />
                 Invoice
               </Button>
-              <Button>
-                <Edit className="h-4 w-4 mr-2" />
-                Update Status
-              </Button>
+              <Button onClick={() => setShowStatusForm((v) => !v)}>
+                 <Edit className="h-4 w-4 mr-2" />
+                 Update Status
+               </Button>
             </div>
           </div>
         </motion.div>
+ 
+        {showStatusForm && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-lg border p-6">
+            <h3 className="text-lg font-semibold mb-4">Update Order Status</h3>
+            <form onSubmit={onSubmitStatus} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <select
+                  value={statusValue}
+                  onChange={(e) => setStatusValue(e.target.value)}
+                  className="px-3 py-2 border rounded-md bg-background w-full"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Tracking Number</label>
+                <Input
+                  placeholder="Tracking number (optional)"
+                  value={trackingValue}
+                  onChange={(e) => setTrackingValue(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium mb-2 block">Notes</label>
+                <Textarea
+                  placeholder="Notes (optional)"
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  className="min-h-24"
+                />
+              </div>
+              <div className="md:col-span-3 flex gap-2">
+                <Button type="submit" disabled={updating}>Save</Button>
+                <Button type="button" variant="outline" onClick={() => setShowStatusForm(false)}>Cancel</Button>
+              </div>
+            </form>
+          </motion.div>
+        )}
 
-        {/* Order Content */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+         {/* Order Content */}
+         <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.2 }}
+         >
           <Tabs defaultValue="details" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="details">Order Details</TabsTrigger>
               <TabsTrigger value="customer">Customer Info</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="space-y-6">
@@ -245,7 +304,7 @@ export default function AdminOrderDetailPage() {
                       {order.items.map((item) => (
                         <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                           <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                            <Image src={item.image} alt={item.name} fill className="object-cover" />
+                            <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
                           </div>
                           <div className="flex-1">
                             <Link href={`/products/${item.productId}`} className="font-medium hover:text-primary">
@@ -315,7 +374,8 @@ export default function AdminOrderDetailPage() {
                     <h3 className="text-lg font-semibold mb-4">Payment</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2"><DollarSign className="h-4 w-4" /> {order.paymentMethod}</div>
-                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Placed on {new Date(order.date).toLocaleString()}</div>
+                      <div className="flex items-center gap-2"><Package className="h-4 w-4" /> Payment Status: <span className="capitalize">{order.paymentStatus}</span></div>
+                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Placed on {new Date(order.createdAt).toLocaleString()}</div>
                       {order.trackingNumber && (
                         <div className="flex items-center gap-2"><Truck className="h-4 w-4" /> Tracking: {order.trackingNumber}</div>
                       )}
@@ -336,24 +396,6 @@ export default function AdminOrderDetailPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="timeline" className="space-y-6">
-              <div className="bg-card rounded-lg border p-6">
-                <h3 className="text-lg font-semibold mb-4">Order Timeline</h3>
-                <div className="space-y-4">
-                  {orderTimeline.map((event, idx) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <Badge className={event.completed ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
-                          {event.status}
-                        </Badge>
-                        <p className="text-sm text-muted-foreground">{event.date}</p>
-                      </div>
-                      <p className="flex-1">{event.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
           </Tabs>
         </motion.div>
       </div>

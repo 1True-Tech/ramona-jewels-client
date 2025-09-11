@@ -122,7 +122,7 @@ export function FeaturedProducts() {
         </motion.div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6 mb-12 justify-items-center">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6 mb-12 justify-items-center items-center">
           <AnimatePresence>
             {displayedProducts.map((product, index) => (
               <motion.div

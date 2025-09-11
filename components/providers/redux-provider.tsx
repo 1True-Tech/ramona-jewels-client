@@ -2,7 +2,8 @@
 
 import { Provider } from 'react-redux'
 import { useEffect } from 'react'
-import { restoreAuth } from '@/store/slices/authSlice'
+import { restoreAuth, logout } from '@/store/slices/authSlice'
+import type { RootState } from '@/store'
 import { store } from '@/store'
 
 interface ReduxProviderProps {
@@ -16,9 +17,10 @@ function AuthRestorer() {
     
     // Set up token expiry check
     const checkTokenExpiry = () => {
-      const state = store.getState().auth
-      if (state.tokenExpiry && Date.now() > state.tokenExpiry) {
-        store.dispatch({ type: 'auth/logout' })
+      const state = store.getState() as RootState
+      const tokenExpiry = state.auth.tokenExpiry
+      if (tokenExpiry && Date.now() > tokenExpiry) {
+        store.dispatch(logout())
       }
     }
     
