@@ -478,7 +478,7 @@ export default function CheckoutPage() {
                   {state.items.map((item) => (
                     <div key={`${item.id}-${item.color}-${item.size}`} className="flex items-center gap-3">
                       <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted">
-                        <Image src={item.image || "/images/TestImage.jpg"} alt={item.name} fill className="object-cover" />
+                        <Image src={item.image || "/images/TestImage.jpg"} alt={item.name} fill className="object-cover" loading="lazy"/>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{item.name}</div>
