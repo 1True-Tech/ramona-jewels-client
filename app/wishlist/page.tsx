@@ -10,6 +10,7 @@ import { useWishlist } from "@/contexts/wishlist-context"
 import { useCart } from "@/contexts/cart-context"
 import { useAppDispatch } from "@/store/hooks"
 import { showModal } from "@/store/slices/uiSlice"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 export default function WishlistPage() {
   const { state: wishlistState, removeItem } = useWishlist()
@@ -97,7 +98,7 @@ export default function WishlistPage() {
                 <CardContent className="p-0">
                   <div className="relative aspect-square overflow-hidden">
                     <Image
-                      src={item.image}
+                      src={toServerImageUrl(item.image)}
                       alt={item.name}
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"

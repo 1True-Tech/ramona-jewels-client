@@ -4,6 +4,7 @@ import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -236,11 +237,11 @@ export default function OrdersPage() {
                           <div key={itemIndex} className="flex items-center gap-3">
                             <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted">
                               <Image 
-                                src={item.image || "/images/TestImage.jpg"} 
+                                src={toServerImageUrl(item.image || "/images/TestImage.jpg")}
+                                loading="lazy"
                                 alt={item.name} 
                                 fill 
                                 className="object-cover" 
-                                loading="lazy"
                               />
                             </div>
                             <div className="flex-1 min-w-0">

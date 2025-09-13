@@ -17,6 +17,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
 import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 export default function AdminInventoryPage() {
   const { user, hydrated } = useAuth()
@@ -354,7 +355,7 @@ export default function AdminInventoryPage() {
                         <div className="flex items-center gap-3">
                           <div className="relative min-w-9 h-9 rounded-lg overflow-hidden bg-muted jewelry-sparkle">
                             <Image
-                              src={product.images?.[0] || "/placeholder.svg"}
+                              src={toServerImageUrl(product.images?.[0] || "/placeholder.svg")}
                               alt={product.name}
                               fill
                               className="object-cover"

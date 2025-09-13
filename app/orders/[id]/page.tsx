@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -256,7 +257,7 @@ export default function OrderDetailPage() {
                       <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                         <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted">
                           <Image 
-                            src={item.image || "/images/TestImage.jpg"} 
+                            src={toServerImageUrl(item.image || "/images/TestImage.jpg")} 
                             alt={item.name || 'Item'} 
                             fill 
                             className="object-cover" 
