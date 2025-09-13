@@ -1,45 +1,27 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Users, Package, ShoppingCart, DollarSign } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { StatsCard } from "@/components/admin/stats-card"
 import { RecentOrders } from "@/components/admin/recent-orders"
 import { SalesChart } from "@/components/admin/sales-chart"
 import { useAuth } from "@/contexts/redux-auth-context"
+import { io, Socket } from "socket.io-client"
+import { useGetRevenueMetricsQuery, useGetAnalyticsDashboardQuery } from "@/store/api/analyticsApi"
+import { useGetUserStatsQuery } from "@/store/api/adminApi"
 
-const stats = [
-  {
-    title: "Total Revenue",
-    value: "$45,231.89",
-    change: "+20.1%",
-    trend: "up" as const,
-    icon: DollarSign,
-  },
-  {
-    title: "Orders",
-    value: "2,350",
-    change: "+180.1%",
-    trend: "up" as const,
-    icon: ShoppingCart,
-  },
-  {
-    title: "Products",
-    value: "1,234",
-    change: "+19%",
-    trend: "up" as const,
-    icon: Package,
-  },
-  {
-    title: "Active Users",
-    value: "573",
-    change: "-2.1%",
-    trend: "down" as const,
-    icon: Users,
-  },
-]
+// Ensure stat entries have the correct trend literal union
+type DashStat = {
+  title: string
+  value: string
+  change: string
+  trend: "up" | "down"
+  icon: LucideIcon
+}
 
 export default function AdminDashboard() {
   const { user, hydrated } = useAuth()
@@ -51,6 +33,100 @@ export default function AdminDashboard() {
       router.push("/auth/login")
     }
   }, [user, router, hydrated])
+
+  // ===== Live data wiring (APIs + Socket.IO) =====
+  const skipQueries = !hydrated || !user || user.role !== "admin"
+
+  const { data: revenueResp } = useGetRevenueMetricsQuery(undefined, {
+    skip: skipQueries,
+    refetchOnMountOrArgChange: true,
+  })
+  const { data: dashboardResp } = useGetAnalyticsDashboardQuery(undefined, {
+    skip: skipQueries,
+    refetchOnMountOrArgChange: true,
+  })
+  const { data: userStatsResp } = useGetUserStatsQuery(undefined, {
+    skip: skipQueries,
+    refetchOnMountOrArgChange: true,
+  })
+
+  const [live, setLive] = useState<any | null>(null)
+
+  useEffect(() => {
+    if (skipQueries) return
+
+    const socket: Socket = io(process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5000", {
+      transports: ["websocket"],
+    })
+
+    socket.emit("join_analytics")
+
+    const onUpdate = (payload: any) => {
+      setLive(payload)
+    }
+
+    socket.on("analytics_update", onUpdate)
+
+    return () => {
+      try { socket.emit("leave_analytics") } catch {}
+      try {
+        socket.off("analytics_update", onUpdate)
+        socket.disconnect()
+      } catch {}
+    }
+  }, [skipQueries])
+
+  const revenue = useMemo(() => (live?.revenue ? live.revenue : revenueResp?.data), [live, revenueResp]) as any
+  const totalProducts = useMemo(
+    () => (live?.inventory?.totalProducts ?? dashboardResp?.data?.inventory?.totalProducts ?? 0),
+    [live, dashboardResp]
+  )
+  const activeUsers = useMemo(
+    () => (typeof live?.activeUsers === "number" ? live.activeUsers : userStatsResp?.data?.active ?? 0),
+    [live, userStatsResp]
+  )
+
+  const stats = useMemo<DashStat[]>(() => {
+    const revenueTotal = Number(revenue?.totalRevenue ?? 0)
+    const ordersTotal = Number(revenue?.totalOrders ?? 0)
+
+    const revenueGrowth = typeof revenue?.revenueGrowth === "number" ? revenue.revenueGrowth : 0
+    const ordersGrowth = typeof (revenue as any)?.ordersGrowth === "number" ? (revenue as any).ordersGrowth : 0
+
+    const revenueChange = `${revenueGrowth >= 0 ? "+" : ""}${revenueGrowth.toFixed(1)}%`
+    const ordersChange = `${ordersGrowth >= 0 ? "+" : ""}${ordersGrowth.toFixed(1)}%`
+
+    return [
+      {
+        title: "Total Revenue",
+        value: `$${revenueTotal.toLocaleString()}`,
+        change: revenueChange,
+        trend: revenueGrowth < 0 ? "down" : "up",
+        icon: DollarSign,
+      },
+      {
+        title: "Orders",
+        value: `${ordersTotal.toLocaleString()}`,
+        change: ordersChange,
+        trend: ordersGrowth < 0 ? "down" : "up",
+        icon: ShoppingCart,
+      },
+      {
+        title: "Products",
+        value: `${Number(totalProducts).toLocaleString()}`,
+        change: "+0.0%",
+        trend: "up",
+        icon: Package,
+      },
+      {
+        title: "Active Users",
+        value: `${Number(activeUsers).toLocaleString()}`,
+        change: "+0.0%",
+        trend: "up",
+        icon: Users,
+      },
+    ]
+  }, [revenue, totalProducts, activeUsers])
 
   if (!hydrated) {
     return null

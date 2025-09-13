@@ -243,8 +243,19 @@ export default function ProfilePage() {
       // Build minimal update data
       const minimalPayload: UpdateProfileData = buildUpdateData(originalProfile, updatedProfile) as UpdateProfileData
       
-      if (!Object.keys(minimalPayload || {}).length && !selectedFile) {
-        showModal('warning', 'No Changes', 'You have not modified any fields to update.')
+      if (!Object.keys(minimalPayload || {}).length) {
+        // If only avatar changed, consider it a successful update without PUT
+        if (updatedProfile.avatar && updatedProfile.avatar !== originalProfile?.avatar) {
+          setProfile(updatedProfile)
+          setOriginalProfile(updatedProfile)
+          if (updateUser) {
+            updateUser({ ...user, avatar: updatedProfile.avatar })
+          }
+          setIsEditing(false)
+          showModal('success', 'Avatar Updated', 'Your avatar has been updated successfully!')
+        } else {
+          showModal('warning', 'No Changes', 'You have not modified any fields to update.')
+        }
         return
       }
 
