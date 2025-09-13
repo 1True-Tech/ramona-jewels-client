@@ -116,12 +116,21 @@ export function validateField(field: string, value: any, rules: any): string[] {
   return errors
 }
 
-export function validateProfile(profile: any): ValidationResult {
+export function validateProfile(profile: any, options?: { mode?: 'full' | 'partial' }): ValidationResult {
+  const mode = options?.mode || 'full'
   const errors: Record<string, string[]> = {}
+
+  const shouldValidateField = (obj: any, key: string) => {
+    if (mode === 'partial') {
+      return Object.prototype.hasOwnProperty.call(obj, key)
+    }
+    return true
+  }
   
   // Validate basic fields
   const basicFields = ['name', 'email', 'phone', 'bio']
   basicFields.forEach(field => {
+    if (!shouldValidateField(profile, field)) return
     const fieldErrors = validateField(field, profile[field], profileValidationRules[field as keyof typeof profileValidationRules])
     if (fieldErrors.length > 0) {
       errors[field] = fieldErrors
@@ -132,6 +141,7 @@ export function validateProfile(profile: any): ValidationResult {
   if (profile.address) {
     const addressFields = ['street', 'city', 'state', 'zipCode', 'country']
     addressFields.forEach(field => {
+      if (mode === 'partial' && !Object.prototype.hasOwnProperty.call(profile.address, field)) return
       const fieldErrors = validateField(
         field, 
         profile.address[field], 

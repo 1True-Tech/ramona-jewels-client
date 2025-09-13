@@ -3,6 +3,7 @@ import { store } from '@/store'
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
+// Create axios instance for user-related API calls
 const userApi = axios.create({
   baseURL: `${baseUrl}/users`,
   headers: {
@@ -10,83 +11,44 @@ const userApi = axios.create({
   },
 })
 
-// Add auth token to requests
+// Attach auth token to requests
 userApi.interceptors.request.use((config) => {
-  // Get token from Redux store instead of localStorage directly
-  const state = store.getState()
-  const token = state.auth.token
+  const state = store.getState() as any
+  const token = state?.auth?.token
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers = config.headers || {}
+    config.headers['Authorization'] = `Bearer ${token}`
   }
   return config
 })
 
-// Add response interceptor to handle errors
+// Handle errors consistently
 userApi.interceptors.response.use(
   (response) => {
     return response
   },
   (error) => {
-    // Handle server errors and format them properly
-    if (error.response?.data) {
-      const serverError = error.response.data
-      
-      // If server returns validation errors array, format them
-      if (serverError.errors && Array.isArray(serverError.errors)) {
-        const formattedErrors: Record<string, string[]> = {}
-        
-        serverError.errors.forEach((err: any) => {
-          const field = err.field || 'general'
-          if (!formattedErrors[field]) {
-            formattedErrors[field] = []
-          }
-          formattedErrors[field].push(err.message)
-        })
-        
-        // Create a structured error response
-        const errorResponse = {
-          success: false,
-          message: serverError.message || 'Validation failed',
-          errors: formattedErrors
-        }
-        
-        // Reject with the formatted error
-        return Promise.reject({
-          ...error,
-          response: {
-            ...error.response,
-            data: errorResponse
-          }
-        })
-      }
-      
-      // For other server errors, ensure consistent format
-      const errorResponse = {
-        success: false,
-        message: serverError.message || serverError.error || 'An error occurred',
-        errors: serverError.errors || null
-      }
-      
+    const err = error?.response?.data || {
+      success: false,
+      message: 'Request failed',
+    }
+
+    // Normalize validation errors if present
+    if (error?.response?.status === 400 && error?.response?.data?.errors) {
       return Promise.reject({
         ...error,
         response: {
           ...error.response,
-          data: errorResponse
-        }
+          data: {
+            success: false,
+            message: error.response.data.message || 'Validation failed',
+            errors: error.response.data.errors,
+          },
+        },
       })
     }
-    
-    // For network errors or other issues
-    return Promise.reject({
-      ...error,
-      response: {
-        data: {
-          success: false,
-          message: error.message || 'Network error occurred',
-          errors: null
-        }
-      }
-    })
+
+    return Promise.reject(error)
   }
 )
 
@@ -112,6 +74,7 @@ export interface UpdateProfileData {
 export interface ChangePasswordData {
   currentPassword: string
   newPassword: string
+  confirmPassword: string
 }
 
 export interface ApiResponse<T = any> {
@@ -134,14 +97,14 @@ export const userApiService = {
     return response.data
   },
 
-  // Change password
+  // Change password (server expects POST)
   changePassword: async (data: ChangePasswordData): Promise<ApiResponse> => {
-    const response = await userApi.put('/change-password', data)
+    const response = await userApi.post('/change-password', data)
     return response.data
   },
 
   // Upload avatar
-  uploadAvatar: async (file: File): Promise<ApiResponse> => {
+  uploadAvatar: async (file: File): Promise<ApiResponse<{ avatar: string }>> => {
     // Validate file type (only images, no SVG or video)
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
@@ -162,7 +125,16 @@ export const userApiService = {
         'Content-Type': 'multipart/form-data',
       },
     })
-    return response.data
+
+    // Server returns { success, data: "/uploads/avatars/..", message }
+    const raw = response.data as ApiResponse<string>
+    const normalized: ApiResponse<{ avatar: string }> = {
+      success: raw.success,
+      message: raw.message,
+      data: raw.data ? { avatar: raw.data } : undefined,
+      errors: (raw as any).errors,
+    }
+    return normalized
   },
 
   // Get user statistics

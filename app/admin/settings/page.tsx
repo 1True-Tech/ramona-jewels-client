@@ -26,10 +26,13 @@ import {
   Save,
   Upload
 } from "lucide-react"
+import { useGetSettingsQuery, useUpdateSettingsMutation } from "@/store/api/settingsApi"
 
 export default function AdminSettingsPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const { data: settingsData } = useGetSettingsQuery()
+  const [updateSettings] = useUpdateSettingsMutation()
   const [settings, setSettings] = useState({
     // Store Settings
     storeName: "Ramona Jewels",
@@ -76,6 +79,13 @@ export default function AdminSettingsPage() {
     }
   }, [user, router])
 
+  // Hydrate Stripe toggle from backend
+  useEffect(() => {
+    if (settingsData?.success && settingsData.data?.payments?.stripe?.enabled !== undefined) {
+      setSettings((prev) => ({ ...prev, stripeEnabled: !!settingsData.data.payments!.stripe!.enabled }))
+    }
+  }, [settingsData])
+
   if (!user || user.role !== "admin") {
     return null
   }
@@ -90,6 +100,11 @@ export default function AdminSettingsPage() {
       ...prev,
       [field]: value
     }))
+
+    // Persist Stripe toggle in real-time
+    if (field === 'stripeEnabled') {
+      updateSettings({ payments: { stripe: { enabled: Boolean(value) } } })
+    }
   }
 
   return (

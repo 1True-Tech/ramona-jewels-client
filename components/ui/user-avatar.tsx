@@ -32,7 +32,7 @@ export function UserAvatar({
   showOnlineStatus = false 
 }: UserAvatarProps) {
   const avatarUrl = getUserAvatarUrl(user?.avatar)
-  const hasProfileImage = hasUserProfileImage(user)
+  const hasProfileImage = hasUserProfileImage(user?.avatar)
   const initials = getUserInitials(user?.name)
   
   return (
@@ -73,7 +73,7 @@ export function UserProfileImage({
   className?: string
 }) {
   const avatarUrl = getUserAvatarUrl(user?.avatar)
-  const hasProfileImage = hasUserProfileImage(user)
+  const hasProfileImage = hasUserProfileImage(user?.avatar)
   const initials = getUserInitials(user?.name)
   
   if (hasProfileImage && avatarUrl) {

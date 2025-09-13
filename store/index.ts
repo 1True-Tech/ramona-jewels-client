@@ -11,6 +11,7 @@ import { productTypesApi } from './api/productTypesApi'
 import { reviewsApi } from './api/reviewsApi'
 import { returnsApi } from './api/returnsApi'
 import uiReducer from './slices/uiSlice'
+import { settingsApi } from './api/settingsApi'
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +27,7 @@ export const store = configureStore({
     [productTypesApi.reducerPath]: productTypesApi.reducer,
     [reviewsApi.reducerPath]: reviewsApi.reducer,
     [returnsApi.reducerPath]: returnsApi.reducer,
+    [settingsApi.reducerPath]: settingsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -43,6 +45,7 @@ export const store = configureStore({
       productTypesApi.middleware,
       reviewsApi.middleware,
       returnsApi.middleware,
+      settingsApi.middleware,
     ),
 })
 
