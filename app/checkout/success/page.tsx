@@ -25,6 +25,7 @@ import { MobileNav } from "@/components/layouts/mobile-nav"
 import { useOrderTracking } from "@/contexts/order-tracking-context"
 import { io, Socket } from 'socket.io-client'
 import { toast } from "@/hooks/use-toast"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 interface Order {
   id: string
@@ -317,7 +318,7 @@ function OrderSuccess() {
                       <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                         <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted">
                           <Image 
-                            src={item.image || "/images/TestImage.jpg"} 
+                            src={toServerImageUrl(item.image || "/images/TestImage.jpg")} 
                             alt={item.name} 
                             fill 
                             className="object-cover" 

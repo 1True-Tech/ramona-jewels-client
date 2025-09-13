@@ -11,21 +11,23 @@ import { useGetProductsQuery } from "@/store/api/productsApi";
 import type { Product as ApiProduct } from "@/store/apiTypes";
 import { useGetProductTypesQuery } from "@/store/api/productTypesApi";
 import { useGetCategoriesQuery } from "@/store/api/categoriesApi";
+import { toServerImageUrl } from "@/lib/utils/imageUtils";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
-  try {
-    return API_URL ? new URL(API_URL).origin : "";
-  } catch {
-    return "";
-  }
-})();
-const toImageUrl = (src?: string) => {
-  if (!src) return "/placeholder.svg";
-  if (/^https?:\/\//i.test(src)) return src;
-  const path = src.startsWith("/") ? src : `/${src}`;
-  return `${SERVER_URL}${path}`;
-};
+// -const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// -const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
+// -  try {
+// -    return API_URL ? new URL(API_URL).origin : "";
+// -  } catch {
+// -    return "";
+// -  }
+// -})();
+// -const toImageUrl = (src?: string) => {
+// -  if (!src) return "/placeholder.svg";
+// -  if (/^https?:\/\//i.test(src)) return src;
+// -  const path = src.startsWith("/") ? src : `/${src}`;
+// -  return `${SERVER_URL}${path}`;
+// -};
+const toImageUrl = (src?: string) => toServerImageUrl(src || "/placeholder.svg");
 
 const toUIProduct = (p: ApiProduct): UIProduct => ({
   id: p._id,

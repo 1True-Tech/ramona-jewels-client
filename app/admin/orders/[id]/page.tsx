@@ -31,6 +31,7 @@ import { useGetOrderQuery, useUpdateOrderStatusMutation } from "@/store/api/orde
 import { io, Socket } from "socket.io-client"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 
 
@@ -306,7 +307,7 @@ export default function AdminOrderDetailPage() {
                       {order.items.map((item) => (
                         <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                           <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                            <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" loading="lazy"/>
+                            <Image src={toServerImageUrl(item.image || "/placeholder.svg")} alt={item.name} fill className="object-cover" loading="lazy"/>
                           </div>
                           <div className="flex-1">
                             <Link href={`/products/${item.productId}`} className="font-medium hover:text-primary">

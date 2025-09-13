@@ -52,15 +52,16 @@ const nextConfig: NextConfig = {
         pathname: '/**'
       },
     ],
-    domains: [
-      "localhost",
-    ],
   },
   async rewrites() {
-    const server = process.env.NEXT_PUBLIC_SERVER_URL
+    const API = process.env.NEXT_PUBLIC_API_URL || ""
+    const SERVER = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
+      try { return API ? new URL(API).origin : "" } catch { return "" }
+    })() || 'http://localhost:5000'
+    const base = SERVER.replace(/\/$/, "")
     return [
-      { source: '/uploads/:path*', destination: `${server}/uploads/:path*` },
-      { source: '/api/v1/uploads/:path*', destination: `${server}/api/v1/uploads/:path*` },
+      { source: '/uploads/:path*', destination: `${base}/uploads/:path*` },
+      { source: '/api/v1/uploads/:path*', destination: `${base}/api/v1/uploads/:path*` },
     ]
   },
 };

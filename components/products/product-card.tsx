@@ -12,6 +12,7 @@ import { useCart } from "@/contexts/cart-context"
 import { useWishlist } from "@/contexts/wishlist-context"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 export interface Product {
   id: string
@@ -120,7 +121,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <Link href={getProductUrl()}>
         <div className="relative aspect-square overflow-hidden w-full">
           <Image
-            src={product.image || "/placeholder.svg"}
+            src={toServerImageUrl(product.image || "/placeholder.svg")}
             alt={product.name}
             fill
             className="object-cover transition-transform group-hover:scale-105"

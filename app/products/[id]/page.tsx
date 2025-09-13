@@ -34,23 +34,26 @@ import { MobileNav } from "@/components/layouts/mobile-nav"
 import { useToast } from "@/hooks/use-toast"
 import { useGetReviewsByProductQuery, useCreateReviewMutation, Review } from '@/store/api/reviewsApi'
 import { useProductReviewsRealtime } from '@/hooks/use-product-reviews-realtime'
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 // Helper: build server/base URL for images
-const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
-  try {
-    return API_URL ? new URL(API_URL).origin : ""
-  } catch {
-    return ""
-  }
-})()
-
-const toImageUrl = (img?: string | null) => {
-  if (!img) return "/placeholder.svg"
-  if (img.startsWith("http")) return img
-  if (img.startsWith("/uploads")) return `${SERVER_URL}${img}`
-  return img
-}
+// -const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
+// -const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || (() => {
+// -  try {
+// -    return API_URL ? new URL(API_URL).origin : ""
+// -  } catch {
+// -    return ""
+// -  }
+// -})()
+// -
+// -const toImageUrl = (img?: string | null) => {
+// -  if (!img) return "/placeholder.svg"
+// -  if (img.startsWith("http")) return img
+// -  if (img.startsWith("/uploads")) return `${SERVER_URL}${img}`
+// -  return img
+// -}
+// Use shared image URL normalizer
+const toImageUrl = (img?: string | null) => toServerImageUrl(img || "/placeholder.svg")
 
 // Local type for details page - using only backend data
 interface ExtendedProduct {

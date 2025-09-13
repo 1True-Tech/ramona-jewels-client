@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
@@ -68,7 +69,7 @@ export default function CartPage() {
               >
                 <div className="flex gap-1">
                   <div className="relative w-12 h-15 md:w-20 md:h-20 rounded-md overflow-hidden bg-muted">
-                    <Image src={item.image || "/images/TestImage.jpg"} alt={item.name} fill className="object-cover" />
+                    <Image src={toServerImageUrl(item.image || "/images/TestImage.jpg")} alt={item.name} fill className="object-cover" />
                   </div>
 
                   <div className="flex-1 w-full max-w-screen">
