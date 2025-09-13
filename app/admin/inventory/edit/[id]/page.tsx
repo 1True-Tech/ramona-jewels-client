@@ -18,6 +18,7 @@ import { useGetProductQuery, useUpdateProductMutation, useUploadProductImagesMut
 import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 import Image from "next/image"
 import Link from "next/link"
+import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 export default function EditProductPage() {
   const { user } = useAuth()
@@ -292,32 +293,32 @@ export default function EditProductPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div>
-    <Label htmlFor="size">Size</Label>
-    <Input id="size" defaultValue={product.size || ""} />
-  </div>
-  {product.type === "perfume" && (
-    <>
-      <div>
-        <Label htmlFor="concentration">Concentration</Label>
-        <Input id="concentration" defaultValue={product.concentration || ""} />
-      </div>
-      <div>
-        <Label htmlFor="gender">Gender</Label>
-        <Select value={gender} onValueChange={setGender}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unisex">Unisex</SelectItem>
-            <SelectItem value="men">Men</SelectItem>
-            <SelectItem value="women">Women</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </>
-  )}
-</div>
+                  <div>
+                    <Label htmlFor="size">Size</Label>
+                    <Input id="size" defaultValue={product.size || ""} />
+                  </div>
+                  {product.type === "perfume" && (
+                    <>
+                      <div>
+                        <Label htmlFor="concentration">Concentration</Label>
+                        <Input id="concentration" defaultValue={product.concentration || ""} />
+                      </div>
+                      <div>
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select value={gender} onValueChange={setGender}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unisex">Unisex</SelectItem>
+                            <SelectItem value="men">Men</SelectItem>
+                            <SelectItem value="women">Women</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -338,7 +339,7 @@ export default function EditProductPage() {
                 <div className="space-y-4">
                   <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
                     <Image
-                      src={(images && images[0]) || product.image || "/placeholder.svg"}
+                      src={toServerImageUrl((images && images[0]) || product.image || "/placeholder.svg")}
                       alt={product.name}
                       fill
                       className="object-cover"

@@ -6,6 +6,10 @@ export interface SalesData {
   revenue: number
   orders: number
   averageOrderValue: number
+  // Optional breakdowns for UI charts that visualize status-based series
+  paid?: number
+  pending?: number
+  cancelled?: number
 }
 
 export interface ProductPerformance {

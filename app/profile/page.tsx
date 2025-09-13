@@ -35,7 +35,7 @@ import {
   getFieldError, 
   hasFieldError
 } from "@/lib/validations/profileValidation"
-import { UserProfile } from "../types"
+import type { UserProfile } from "@/app/types"
 import { useRouter } from "next/navigation"
 import { Loader } from "@/components/ui/loader"
 import { getUserAvatarUrl, hasUserProfileImage } from "@/lib/utils/imageUtils"
@@ -94,6 +94,66 @@ export default function ProfilePage() {
     isActive: user?.isActive || true
   })
 
+  // Track the original profile to build diffs for partial updates
+  const [originalProfile, setOriginalProfile] = useState<UserProfile | null>(null)
+
+  // Helper to compute minimal diff payload for partial updates
+  const buildUpdateData = (original: UserProfile | null, current: UserProfile) => {
+    const diff: any = {}
+    if (!original) {
+      // No baseline, send non-derived fields that exist
+      if (current.name !== undefined) diff.name = current.name
+      if (current.email !== undefined) diff.email = current.email
+      if (current.phone !== undefined) diff.phone = current.phone
+      if (current.bio !== undefined) diff.bio = current.bio
+      if (current.address) {
+        const addr: any = {}
+        ;(['street','city','state','zipCode','country'] as const).forEach((k) => {
+          if (current.address && current.address[k] !== undefined) addr[k] = current.address[k]
+        })
+        if (Object.keys(addr).length) diff.address = addr
+      }
+      if (current.preferences) {
+        const prefs: any = {}
+        ;(['notifications','newsletter','twoFactorAuth'] as const).forEach((k) => {
+          if (current.preferences && current.preferences[k] !== undefined) prefs[k] = current.preferences[k]
+        })
+        if (Object.keys(prefs).length) diff.preferences = prefs
+      }
+      return diff
+    }
+
+    // Shallow fields
+    if (current.name !== original.name) diff.name = current.name
+    if (current.email !== original.email) diff.email = current.email
+    if (current.phone !== original.phone) diff.phone = current.phone
+    if (current.bio !== original.bio) diff.bio = current.bio
+
+    // Nested address
+    if (current.address) {
+      const addrDiff: any = {}
+      ;(['street','city','state','zipCode','country'] as const).forEach((k) => {
+        const cur = current.address?.[k]
+        const org = original.address?.[k]
+        if (cur !== org) addrDiff[k] = cur
+      })
+      if (Object.keys(addrDiff).length) diff.address = addrDiff
+    }
+
+    // Nested preferences
+    if (current.preferences) {
+      const prefDiff: any = {}
+      ;(['notifications','newsletter','twoFactorAuth'] as const).forEach((k) => {
+        const cur = current.preferences?.[k]
+        const org = original.preferences?.[k]
+        if (cur !== org) prefDiff[k] = cur
+      })
+      if (Object.keys(prefDiff).length) diff.preferences = prefDiff
+    }
+
+    return diff
+  }
+
   // Load profile data on component mount
   useEffect(() => {
     loadProfile()
@@ -114,6 +174,7 @@ export default function ProfilePage() {
       const response = await userApiService.getProfile()
       if (response.success && response.data) {
         setProfile(prev => ({ ...prev, ...response.data }))
+        setOriginalProfile(response.data as UserProfile)
       }
     } catch (error) {
       console.error('Failed to load profile:', error)
@@ -141,11 +202,16 @@ export default function ProfilePage() {
       setIsSaving(true)
       setValidationErrors({})
       
-      // Validate profile data
-      const validation = validateProfile(profile)
-      if (!validation.isValid) {
-        setValidationErrors(validation.errors)
-        showModal('error', 'Validation Error', 'Please fix the errors below before saving.', validation.errors)
+      // Build minimal update data (diff) for partial validation and update
+      const updateDataForValidation: any = {}
+      const diff = buildUpdateData(originalProfile, profile)
+      Object.assign(updateDataForValidation, diff)
+
+      // Validate only changed fields in partial mode
+      const validationResult = validateProfile(updateDataForValidation as any, { mode: 'partial' })
+      if (!validationResult.isValid) {
+        setValidationErrors(validationResult.errors)
+        showModal('error', 'Validation Failed', 'Please fix validation errors before saving.', validationResult.errors)
         return
       }
 
@@ -174,26 +240,32 @@ export default function ProfilePage() {
         }
       }
 
-      // Prepare update data
-      const updateData: UpdateProfileData = {
-        name: updatedProfile.name,
-        email: updatedProfile.email,
-        phone: updatedProfile.phone,
-        bio: updatedProfile.bio,
-        address: updatedProfile.address,
-        preferences: {
-          notifications: updatedProfile.preferences.notifications,
-          newsletter: updatedProfile.preferences.newsletter,
-          twoFactorAuth: updatedProfile.preferences.twoFactorAuth
+      // Build minimal update data
+      const minimalPayload: UpdateProfileData = buildUpdateData(originalProfile, updatedProfile) as UpdateProfileData
+      
+      if (!Object.keys(minimalPayload || {}).length) {
+        // If only avatar changed, consider it a successful update without PUT
+        if (updatedProfile.avatar && updatedProfile.avatar !== originalProfile?.avatar) {
+          setProfile(updatedProfile)
+          setOriginalProfile(updatedProfile)
+          if (updateUser) {
+            updateUser({ ...user, avatar: updatedProfile.avatar })
+          }
+          setIsEditing(false)
+          showModal('success', 'Avatar Updated', 'Your avatar has been updated successfully!')
+        } else {
+          showModal('warning', 'No Changes', 'You have not modified any fields to update.')
         }
+        return
       }
 
-      // Call API to update profile
-      const response = await userApiService.updateProfile(updateData)
+      // Call API to update profile with minimal payload
+      const response = await userApiService.updateProfile(minimalPayload)
       
       if (response.success) {
         // Update local profile state with the new avatar if it was uploaded
         setProfile(updatedProfile)
+        setOriginalProfile(updatedProfile)
         
         // Update auth context with new user data
         if (updateUser && response.data) {
@@ -204,6 +276,7 @@ export default function ProfilePage() {
         setIsEditing(false)
         showModal('success', 'Profile Updated', response.message || 'Your profile has been updated successfully!')
       } else {
+        setValidationErrors(response.errors || {})
         showModal('error', 'Update Failed', response.message || 'Failed to update profile.', response.errors)
       }
     } catch (error: any) {
@@ -233,7 +306,8 @@ export default function ProfilePage() {
 
       const changePasswordData: ChangePasswordData = {
         currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
       }
 
       const response = await userApiService.changePassword(changePasswordData)
@@ -402,7 +476,7 @@ export default function ProfilePage() {
                   </Avatar>
                 ) : (
                   <Avatar className = "h-20 w-20">
-                    {hasUserProfileImage(profile) ? (
+                    {hasUserProfileImage(profile.avatar) ? (
                       <AvatarImage 
                         src={getUserAvatarUrl(profile.avatar) || profile.avatar} 
                         alt={profile.name} 

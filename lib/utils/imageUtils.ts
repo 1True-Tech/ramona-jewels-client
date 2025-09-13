@@ -11,14 +11,14 @@ export function getUserAvatarUrl(avatar?: string | null): string {
   if (!avatar) return "/placeholder.svg"
   const src = String(avatar)
   if (/^https?:\/\//i.test(src)) return src
+  // For server-hosted uploads, prefer returning a relative path so Next.js rewrites can proxy correctly across devices
   if (src.startsWith("/uploads") || src.startsWith("/api/v1/uploads")) {
-    const base = SERVER_BASE_URL.replace(/\/$/, "")
-    return base ? `${base}${src}` : src
+    return src
   }
   if (src.startsWith("/images/")) return src
   const path = src.startsWith("/") ? src : `/uploads/${src}`
-  const base = SERVER_BASE_URL.replace(/\/$/, "")
-  return base ? `${base}${path}` : path
+  // Return relative path to leverage Next rewrites both in dev and prod
+  return path
 }
 
 export function hasUserProfileImage(avatar?: string | null): boolean {
@@ -52,6 +52,6 @@ export function toServerImageUrl(src?: string | null): string {
     path = `/uploads/${path.replace(/^\/+/, "")}`
   }
 
-  const base = SERVER_BASE_URL.replace(/\/$/, "")
-  return base ? `${base}${path}` : path
+  // Return relative path; Next.js rewrites will forward to the correct server base
+  return path
 }
