@@ -10,6 +10,8 @@ import {
   YAxis,
 } from "recharts"
 import { useGetSalesDataQuery } from "@/store/api/analyticsApi"
+// import { Select } from "@radix-ui/react-select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 export function SalesChart() {
   // Fetch monthly aggregated sales data
@@ -53,22 +55,26 @@ export function SalesChart() {
         <h3 className="text-lg font-semibold gradient-text">
           Sales Overview ({selectedYear})
         </h3>
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-          className="border rounded-md px-2 py-1 text-sm"
+        <Select
+          value={String(selectedYear)} // ✅ must be string
+          onValueChange={(val) => setSelectedYear(Number(val))}
         >
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="max-w-[118px] bg-amber-400 text-white">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {years.map((y) => (
+              <SelectItem key={y} value={String(y)}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={filteredData} margin={{ left: -10, right: 12 }}>
+          <AreaChart data={filteredData} margin={{ left: -30, right: 12 }}>
             <defs>
               <linearGradient id="fillPaid" x1="0" y1="0" x2="0" y2="1">
                 <stop
