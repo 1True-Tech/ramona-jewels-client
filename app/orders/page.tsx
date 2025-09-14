@@ -35,7 +35,7 @@ export default function OrdersPage() {
     skip: !user, // don't fetch if not authenticated
   })
 
-  const orders: ApiOrder[] = data?.data ?? []
+  const orders: ApiOrder[] = useMemo(() => data?.data ?? [], [data])
 
   const filteredOrders = useMemo(() => {
     if (!searchTerm) return orders
