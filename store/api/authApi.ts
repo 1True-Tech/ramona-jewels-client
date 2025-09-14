@@ -28,6 +28,8 @@ interface RefreshTokenResponse {
 
 interface GoogleLoginRequest {
   idToken: string
+  mode?: 'signup' | 'login'
+  clientId?: string
 }
 
 interface FacebookLoginRequest {
@@ -200,32 +202,22 @@ export const authApi = createApi({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled
-          // Update user data in store if needed
+          if (data?.success && data?.data) {
+            // Optionally sync user on getMe
+          }
         } catch (error) {
-          // If getMe fails, user might be unauthorized
-          dispatch(logout())
+          // ignore
         }
       },
     }),
-    
+
     refreshToken: builder.mutation<RefreshTokenResponse, void>({
       query: () => ({
         url: '/refresh',
         method: 'POST',
       }),
-      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled
-          dispatch(refreshToken({ 
-            token: data.token, 
-            expiresIn: data.expiresIn 
-          }))
-        } catch (error) {
-          dispatch(logout())
-        }
-      },
     }),
-    
+
     updateProfile: builder.mutation<{ success: boolean; data: User }, Partial<User>>({
       query: (userData) => ({
         url: '/profile',
