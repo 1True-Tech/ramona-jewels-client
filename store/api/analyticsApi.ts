@@ -142,8 +142,8 @@ const baseQueryWithModal: typeof baseQuery = async (args: any, api: any, extra: 
     const err = result.error as any
     const message = err?.data?.message || err?.data?.error || 'Request failed'
     const errors = err?.data?.errors
-    const { showModal } = await import('../slices/uiSlice')
-    api.dispatch(showModal({ type: 'error', title: 'Request Error', message, errors }))
+    // const { showModal } = await import('../slices/uiSlice')
+    // api.dispatch(showModal({ type: 'error', title: 'Request Error', message, errors }))
   } else if (result?.data && result.data.success === true && (args as any)?.method && (args as any)?.method !== 'GET') {
     // For non-GET successful mutations, show success modal with optional message
     const { showModal } = await import('../slices/uiSlice')

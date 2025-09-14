@@ -65,7 +65,11 @@ export default function AdminAnalyticsPage() {
 
 
   // Check for any errors
-  const hasError = dashboardError || revenueError || productError || customerError
+  const dashboardFailed = !!dashboardError && !dashboardData?.data
+  const revenueFailed = !!revenueError && !revenueData?.data
+  const productFailed = !!productError && !productData?.data
+  const customerFailed = !!customerError && !customerData?.data
+  const hasError = dashboardFailed || revenueFailed || productFailed || customerFailed
   
   // Extract error message properly
   const getErrorMessage = (error: any) => {
@@ -73,23 +77,23 @@ export default function AdminAnalyticsPage() {
     return error?.data?.message || error?.message || error?.error || 'Unknown error'
   }
   
-  const errorMessage = getErrorMessage(dashboardError) || 
-                      getErrorMessage(revenueError) || 
-                      getErrorMessage(productError) || 
-                      getErrorMessage(customerError) || 
+  const errorMessage = (dashboardFailed && getErrorMessage(dashboardError)) || 
+                      (revenueFailed && getErrorMessage(revenueError)) || 
+                      (productFailed && getErrorMessage(productError)) || 
+                      (customerFailed && getErrorMessage(customerError)) || 
                       'Failed to load analytics data'
   
   // Log errors for debugging
   useEffect(() => {
     if (hasError) {
       console.log('Analytics Errors:', {
-        dashboard: dashboardError,
-        revenue: revenueError,
-        product: productError,
-        customer: customerError
+        dashboard: { failed: dashboardFailed, error: dashboardError },
+        revenue: { failed: revenueFailed, error: revenueError },
+        product: { failed: productFailed, error: productError },
+        customer: { failed: customerFailed, error: customerError }
       })
     }
-  }, [hasError, dashboardError, revenueError, productError, customerError])
+  }, [hasError, dashboardFailed, revenueFailed, productFailed, customerFailed, dashboardError, revenueError, productError, customerError])
 
   useEffect(() => {
     if (user && user.role !== "admin") {
@@ -146,10 +150,10 @@ export default function AdminAnalyticsPage() {
     }
   }
 
-  const revenue: RevenueMetrics | undefined = revenueData?.data || (hasError ? (mockDashboard.revenue as RevenueMetrics) : undefined)
-  const products = productData?.data || []
-  const customers = customerData?.data || (hasError ? mockDashboard.customers : undefined)
-  const dashboard = dashboardData?.data || (hasError ? mockDashboard : undefined)
+  const revenue: RevenueMetrics | undefined = revenueData?.data ?? (revenueFailed ? (mockDashboard.revenue as RevenueMetrics) : undefined)
+  const products = productData?.data ?? []
+  const customers = customerData?.data ?? (customerFailed ? mockDashboard.customers : undefined)
+  const dashboard = dashboardData?.data ?? (dashboardFailed ? mockDashboard : undefined)
 
   const topProducts = products.slice(0, 4)
 

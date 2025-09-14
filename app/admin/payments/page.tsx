@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { AdminLayout } from "@/components/admin/admin-layout"
@@ -23,101 +23,28 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { useAuth } from "@/contexts/redux-auth-context"
-import { useAppDispatch } from "@/store/hooks"
-import { showModal } from "@/store/slices/uiSlice"
+// Insert orders API hook for real backend data
+import { useGetOrdersQuery } from "@/store/api/ordersApi"
+// Comment unused imports
+// import { useAppDispatch } from "@/store/hooks"
+// import { showModal } from "@/store/slices/uiSlice"
 
-// Mock payment data
-const mockPayments = [
-  {
-    id: "pay_001",
-    orderId: "ORD-2024-001",
-    customer: "Sarah Johnson",
-    email: "sarah@example.com",
-    amount: 2499.99,
-    method: "Credit Card",
-    status: "completed",
-    date: "2024-01-15T10:30:00Z",
-    transactionId: "txn_1234567890",
-    currency: "USD",
-    fees: 72.5,
-    net: 2427.49,
-  },
-  {
-    id: "pay_002",
-    orderId: "ORD-2024-002",
-    customer: "Michael Chen",
-    email: "michael@example.com",
-    amount: 1899.99,
-    method: "PayPal",
-    status: "pending",
-    date: "2024-01-15T09:15:00Z",
-    transactionId: "txn_0987654321",
-    currency: "USD",
-    fees: 55.1,
-    net: 1844.89,
-  },
-  {
-    id: "pay_003",
-    orderId: "ORD-2024-003",
-    customer: "Emily Rodriguez",
-    email: "emily@example.com",
-    amount: 129.99,
-    method: "Apple Pay",
-    status: "failed",
-    date: "2024-01-14T16:45:00Z",
-    transactionId: "txn_1122334455",
-    currency: "USD",
-    fees: 0,
-    net: 0,
-  },
-  {
-    id: "pay_004",
-    orderId: "ORD-2024-004",
-    customer: "David Wilson",
-    email: "david@example.com",
-    amount: 3299.99,
-    method: "Bank Transfer",
-    status: "processing",
-    date: "2024-01-14T14:20:00Z",
-    transactionId: "txn_5566778899",
-    currency: "USD",
-    fees: 15.0,
-    net: 3284.99,
-  },
-  {
-    id: "pay_005",
-    orderId: "ORD-2024-005",
-    customer: "Lisa Anderson",
-    email: "lisa@example.com",
-    amount: 899.99,
-    method: "Credit Card",
-    status: "refunded",
-    date: "2024-01-13T11:10:00Z",
-    transactionId: "txn_9988776655",
-    currency: "USD",
-    fees: -26.1,
-    net: -873.89,
-  },
-]
 
-const paymentMethods = [
-  { id: "all", name: "All Methods", count: mockPayments.length },
-  { id: "credit-card", name: "Credit Card", count: 2 },
-  { id: "paypal", name: "PayPal", count: 1 },
-  { id: "apple-pay", name: "Apple Pay", count: 1 },
-  { id: "bank-transfer", name: "Bank Transfer", count: 1 },
-]
+
+// (dynamic paymentMethods computed with useMemo below)
 
 export default function AdminPaymentsPage() {
   const { user, hydrated } = useAuth()
   const router = useRouter()
-  const dispatch = useAppDispatch()
-  const [payments, setPayments] = useState(mockPayments)
+  // const dispatch = useAppDispatch()
+  // Fetch orders (payments derive from orders)
+  const { data: ordersResp, isLoading, isError } = useGetOrdersQuery({ limit: 100 })
+  const [payments, setPayments] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedMethod, setSelectedMethod] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [dateRange, setDateRange] = useState("all")
-  const [filteredPayments, setFilteredPayments] = useState(mockPayments)
+  const [filteredPayments, setFilteredPayments] = useState<any[]>([])
 
   useEffect(() => {
     if (!hydrated) return
@@ -125,6 +52,44 @@ export default function AdminPaymentsPage() {
       router.push("/auth/login")
     }
   }, [hydrated, user, router])
+
+  // Map orders to payments view-model
+  useEffect(() => {
+    const orders = ordersResp?.data ?? []
+    const mapped = orders.map((order: any) => {
+      const methodMap: Record<string, string> = {
+        stripe: "Credit Card",
+        credit_card: "Credit Card",
+        debit_card: "Debit Card",
+        paypal: "PayPal",
+        cash_on_delivery: "Cash on Delivery",
+      }
+      const method = methodMap[order.paymentMethod] || (order.paymentMethod || "Unknown")
+      const amount = Number(order.total || 0)
+      const rawStatus = order.paymentStatus || "pending"
+      const status = rawStatus === "paid" ? "completed" : rawStatus
+      // Simple estimated fee for card/stripe; 0 otherwise
+      const fees = (order.paymentMethod === "stripe" || order.paymentMethod === "credit_card") && amount
+        ? Number((amount * 0.029 + 0.3).toFixed(2))
+        : 0
+      const net = Number((amount - fees).toFixed(2))
+      return {
+        id: order.id || order._id || order.orderId,
+        orderId: order.orderId,
+        customer: order.customerName || order.customer?.name || order.customerInfo?.name || order.shippingAddress?.fullName || "—",
+        email: order.customerEmail || order.customer?.email || order.customerInfo?.email || order.shippingAddress?.email || "—",
+        amount,
+        method,
+        status,
+        date: order.createdAt,
+        transactionId: order.paymentId || order.orderId,
+        currency: "USD",
+        fees,
+        net,
+      }
+    })
+    setPayments(mapped)
+  }, [ordersResp])
 
   useEffect(() => {
     let filtered = payments
@@ -142,7 +107,7 @@ export default function AdminPaymentsPage() {
 
     // Filter by payment method
     if (selectedMethod !== "all") {
-      filtered = filtered.filter((payment) => payment.method.toLowerCase().replace(" ", "-") === selectedMethod)
+      filtered = filtered.filter((payment) => payment.method.toLowerCase().replace(/\s+/g, "-") === selectedMethod)
     }
 
     // Filter by status
@@ -150,8 +115,43 @@ export default function AdminPaymentsPage() {
       filtered = filtered.filter((payment) => payment.status === selectedStatus)
     }
 
+    // Filter by date range
+    if (dateRange !== "all") {
+      const now = new Date()
+      const threshold = new Date(now)
+      switch (dateRange) {
+        case "today":
+          threshold.setHours(0, 0, 0, 0)
+          break
+        case "week":
+          threshold.setDate(now.getDate() - 7)
+          break
+        case "month":
+          threshold.setMonth(now.getMonth() - 1)
+          break
+        case "quarter":
+          threshold.setMonth(now.getMonth() - 3)
+          break
+      }
+      filtered = filtered.filter((p) => new Date(p.date) >= threshold)
+    }
+
     setFilteredPayments(filtered)
-  }, [searchQuery, selectedMethod, selectedStatus, payments])
+  }, [searchQuery, selectedMethod, selectedStatus, dateRange, payments])
+
+  const paymentMethods = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const p of payments) {
+      const id = (p.method || "unknown").toLowerCase().replace(/\s+/g, "-")
+      counts[id] = (counts[id] || 0) + 1
+    }
+    const list = Object.entries(counts).map(([id, count]) => ({
+      id,
+      name: id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      count,
+    }))
+    return [{ id: "all", name: "All Methods", count: payments.length }, ...list]
+  }, [payments])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -188,8 +188,8 @@ export default function AdminPaymentsPage() {
   }
 
   const totalRevenue = payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0)
-  const totalFees = payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.fees, 0)
-  const netRevenue = payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.net, 0)
+  const totalFees = payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + (p.fees || 0), 0)
+  const netRevenue = payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + (p.net ?? (p.amount - (p.fees || 0))), 0)
   const pendingAmount = payments
     .filter((p) => p.status === "pending" || p.status === "processing")
     .reduce((sum, p) => sum + p.amount, 0)
@@ -369,7 +369,9 @@ export default function AdminPaymentsPage() {
                           >
                             <td className="py-4 px-4">
                               <div>
-                                <p className="font-medium">{payment.transactionId}</p>
+                                <p className="font-medium">
+                                  {payment.id?.length > 10 ? payment.id.slice(0, 10) + "..." : payment.id}
+                                </p>
                                 <p className="text-sm text-muted-foreground">{payment.orderId}</p>
                               </div>
                             </td>
@@ -437,7 +439,7 @@ export default function AdminPaymentsPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {paymentMethods.slice(1).map((method) => {
-                        const percentage = (method.count / mockPayments.length) * 100
+                        const percentage = payments.length ? (method.count / payments.length) * 100 : 0
                         return (
                           <div key={method.id} className="flex items-center justify-between">
                             <span className="text-sm font-medium">{method.name}</span>
@@ -464,7 +466,7 @@ export default function AdminPaymentsPage() {
                     <div className="space-y-4">
                       {["completed", "pending", "processing", "failed", "refunded"].map((status) => {
                         const count = payments.filter((p) => p.status === status).length
-                        const percentage = (count / payments.length) * 100
+                        const percentage = payments.length ? (count / payments.length) * 100 : 0
                         return (
                           <div key={status} className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
