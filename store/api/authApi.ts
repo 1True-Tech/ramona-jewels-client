@@ -36,9 +36,25 @@ interface FacebookLoginRequest {
   accessToken: string
 }
 
+// New types for password reset flow
+interface ForgotPasswordRequest { email: string }
+interface VerifyResetCodeRequest { email: string; code: string }
+interface ResetPasswordRequest { email: string; code: string; newPassword: string }
+interface BasicResponse { success: boolean; message?: string }
+
+// Helper to robustly resolve API base URL
+const resolveApiBase = (): string => {
+  const raw = (process.env.NEXT_PUBLIC_API_URL || '').trim()
+  if (!raw) return 'http://localhost:5000/api/v1'
+  const noTrailing = raw.replace(/\/+$/, '')
+  // If env already ends with /api or /api/v{n}, keep as is; otherwise append /api/v1
+  const hasApiSuffix = /\/api(\/v\d+)?$/i.test(noTrailing)
+  return hasApiSuffix ? noTrailing : `${noTrailing}/api/v1`
+}
+
 const baseQuery = fetchBaseQuery({
 
-  baseUrl: process.env.NEXT_PUBLIC_API_URL + '/auth',
+  baseUrl: resolveApiBase() + '/auth',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token
     if (token) {
@@ -226,6 +242,31 @@ export const authApi = createApi({
       }),
       invalidatesTags: ['User'],
     }),
+
+    // Forgot password flow
+    forgotPassword: builder.mutation<BasicResponse, ForgotPasswordRequest>({
+      query: (payload) => ({
+        url: '/forgot-password',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
+
+    verifyResetCode: builder.mutation<BasicResponse, VerifyResetCodeRequest>({
+      query: (payload) => ({
+        url: '/verify-reset-code',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
+
+    resetPassword: builder.mutation<BasicResponse, ResetPasswordRequest>({
+      query: (payload) => ({
+        url: '/reset-password',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
   }),
 })
 
@@ -238,4 +279,7 @@ export const {
   useUpdateProfileMutation,
   useGoogleSignInMutation,
   useFacebookSignInMutation,
+  useForgotPasswordMutation,
+  useVerifyResetCodeMutation,
+  useResetPasswordMutation,
 } = authApi
