@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { KeyRound } from 'lucide-react'
@@ -13,6 +13,18 @@ import { useAppDispatch } from '@/store/hooks'
 import { showModal } from '@/store/slices/uiSlice'
 
 export default function VerifyResetPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <VerifyResetContent />
+    </Suspense>
+  )
+}
+
+function VerifyResetContent() {
   const params = useSearchParams()
   const emailFromQuery = params.get('email') || ''
   const [email, setEmail] = useState(emailFromQuery)
