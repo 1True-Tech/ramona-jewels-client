@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Lock } from 'lucide-react'
@@ -12,7 +12,20 @@ import { useResetPasswordMutation } from '@/store/api/authApi'
 import { useAppDispatch } from '@/store/hooks'
 import { showModal } from '@/store/slices/uiSlice'
 
+// Outer component provides Suspense boundary required for useSearchParams
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
+  )
+}
+
+function ResetPasswordContent() {
   const params = useSearchParams()
   const emailFromQuery = params.get('email') || ''
   const codeFromQuery = params.get('code') || ''
