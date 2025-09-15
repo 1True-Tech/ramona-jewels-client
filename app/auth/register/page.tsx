@@ -48,21 +48,20 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
   })
 
+  // Defer actual registration until Terms acceptance
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     try {
-      await registerUser(data.name, data.email, data.password)
-      // dispatch(showModal({
-      //   type: 'success',
-      //   title: 'Welcome to Ramona Jewels!',
-      //   message: 'Your account has been created successfully.'
-      // }))
-      router.push("/")
+      const payload = { name: data.name, email: data.email, password: data.password }
+      // Store pending registration in sessionStorage
+      sessionStorage.setItem("pending_registration", JSON.stringify(payload))
+      // Navigate to Terms page where user can accept/decline
+      router.push("/terms")
     } catch (error: any) {
-      const message = error?.message || 'Registration failed'
+      const message = error?.message || 'Unable to proceed to Terms'
       dispatch(showModal({
         type: 'error',
-        title: 'Registration failed',
+        title: 'Registration blocked',
         message,
       }))
     } finally {
@@ -70,18 +69,18 @@ export default function RegisterPage() {
     }
   }
 
+  // For Google sign-up, also gate behind Terms: store the idToken and proceed to /terms
   const onGoogleSuccess = async (credentialResponse: any) => {
     try {
       const idToken = credentialResponse?.credential
       if (!idToken) throw new Error('No Google id token')
-      const res = await googleSignIn({ idToken, mode: 'signup', clientId: googleClientId }).unwrap()
-      if (res.success) {
-        dispatch(showModal({ type: 'success', title: 'Welcome!', message: 'Signed in with Google.' }))
-        router.push('/')
-      }
+      // Save pending social signup to handle on Terms page
+      const socialPayload = { provider: 'google' as const, idToken, clientId: googleClientId }
+      sessionStorage.setItem('pending_social_signup', JSON.stringify(socialPayload))
+      router.push('/terms')
     } catch (e: any) {
       const errData = e?.data
-      const message = errData?.message || errData?.error || 'Google sign-up failed. Please try again.'
+      const message = errData?.message || errData?.error || e?.message || 'Google sign-up failed. Please try again.'
       dispatch(showModal({ type: 'error', title: 'Google Sign-up failed', message }))
     }
   }
@@ -189,7 +188,7 @@ export default function RegisterPage() {
             </div>
 
             <Button type="submit" className="w-full gradient-primary text-white border-0 hover:opacity-90" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? "Proceeding to Terms..." : "Create Account"}
             </Button>
           </form>
 
@@ -218,11 +217,11 @@ export default function RegisterPage() {
                       fill="#34A853"
                     />
                     <path
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      d="M5.84 13.87a7.027 7.027 0 010-3.74V7.29H2.18a11.996 11.996 0 000 9.42l3.66-2.84z"
                       fill="#FBBC05"
                     />
                     <path
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      d="M12 4.73c1.62 0 3.08.56 4.23 1.66l3.17-3.17C16.9 1.23 14.41.25 12 .25 7.7.25 3.99 2.72 2.18 6.29l3.66 2.84C6.71 6.66 9.14 4.73 12 4.73z"
                       fill="#EA4335"
                     />
                   </svg>
@@ -232,24 +231,18 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Already have an account?{" "}
-            <Link href="/auth/login" className="text-primary hover:underline">
-              Sign in
-            </Link>
-          </p>
-
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            By creating an account, you agree to our{" "}
-            <Link href="/terms" className="text-primary hover:underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="text-primary hover:underline">
-              Privacy Policy
-            </Link>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            By creating an account, you agree to our{' '}
+            <Link href="/terms" className="text-primary underline">Terms</Link>,{' '}
+            <Link href="/privacy" className="text-primary underline">Privacy Policy</Link> and{' '}
+            <Link href="/cookies" className="text-primary underline">Cookies Policy</Link>.
           </p>
         </div>
+
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          Already have an account?{' '}
+          <Link href="/auth/login" className="text-primary underline">Sign in</Link>
+        </p>
       </motion.div>
     </div>
   )
