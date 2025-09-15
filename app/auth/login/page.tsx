@@ -91,7 +91,7 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+              <Link href={process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/forgot-password` : "/auth/forgot-password"} className="text-sm text-primary hover:underline">
                 Forgot password?
               </Link>
             </div>
