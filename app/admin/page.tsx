@@ -11,7 +11,7 @@ import { RecentOrders } from "@/components/admin/recent-orders"
 import { SalesChart } from "@/components/admin/sales-chart"
 import { useAuth } from "@/contexts/redux-auth-context"
 import { io, Socket } from "socket.io-client"
-import { useGetRevenueMetricsQuery, useGetAnalyticsDashboardQuery } from "@/store/api/analyticsApi"
+import { useGetRevenueMetricsQuery, useGetAnalyticsDashboardQuery, useGetInventoryInsightsQuery } from "@/store/api/analyticsApi"
 import { useGetUserStatsQuery } from "@/store/api/adminApi"
 
 // Ensure stat entries have the correct trend literal union
@@ -49,6 +49,10 @@ export default function AdminDashboard() {
     skip: skipQueries,
     refetchOnMountOrArgChange: true,
   })
+  const { data: inventoryResp } = useGetInventoryInsightsQuery(undefined, {
+    skip: skipQueries,
+    refetchOnMountOrArgChange: true,
+  })
 
   const [live, setLive] = useState<any | null>(null)
 
@@ -78,8 +82,13 @@ export default function AdminDashboard() {
 
   const revenue = useMemo(() => (live?.revenue ? live.revenue : revenueResp?.data), [live, revenueResp]) as any
   const totalProducts = useMemo(
-    () => (live?.inventory?.totalProducts ?? dashboardResp?.data?.inventory?.totalProducts ?? 0),
-    [live, dashboardResp]
+    () => (
+      (live?.inventory?.totalProducts ??
+      inventoryResp?.data?.totalProducts ??
+      dashboardResp?.data?.inventory?.totalProducts ??
+      0)
+    ),
+    [live, inventoryResp, dashboardResp]
   )
   const activeUsers = useMemo(
     () => (typeof live?.activeUsers === "number" ? live.activeUsers : userStatsResp?.data?.active ?? 0),
