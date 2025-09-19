@@ -199,7 +199,7 @@ export default function AdminPaymentsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold font-playfair gradient-text">Payment Management</h1>
+              <h1 className="text-3xl font-bold">Payment Management</h1>
               <p className="text-muted-foreground">Track and manage all payment transactions</p>
             </div>
             <Button variant="outline" className="border-primary/20 hover:bg-primary/5 bg-transparent">

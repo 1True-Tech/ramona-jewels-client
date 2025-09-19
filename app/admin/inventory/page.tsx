@@ -205,7 +205,7 @@ export default function AdminInventoryPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold font-playfair gradient-text">Inventory Management</h1>
+              <h1 className="text-3xl font-bold">Inventory Management</h1>
               <p className="text-muted-foreground">Manage your jewelry and perfume inventory</p>
             </div>
             <Link href="/admin/inventory/add">
