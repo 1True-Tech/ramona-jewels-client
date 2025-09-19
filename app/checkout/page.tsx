@@ -35,7 +35,8 @@ import { Navbar } from "@/components/layouts/navbar"
 import { MobileNav } from "@/components/layouts/mobile-nav"
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"
-import { useCreateStripePaymentIntentMutation } from "@/store/api/ordersApi"
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js"
+import { useCreateStripePaymentIntentMutation, useCreatePayPalOrderMutation, useCapturePayPalOrderMutation } from "@/store/api/ordersApi"
 import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 interface ShippingInfo {
@@ -73,6 +74,7 @@ const steps = [
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
 const stripePromise = typeof window !== "undefined" && stripeKey ? loadStripe(stripeKey) : null
+const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || ""
 
 export default function CheckoutPage() {
   const { state, clearCart } = useCart()
@@ -84,10 +86,12 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false)
   
   // Stripe state
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [clientSecret, setClientSecret] = useState<string | undefined>(undefined)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [readableOrderId, setReadableOrderId] = useState<string | null>(null)
   const [createPaymentIntent] = useCreateStripePaymentIntentMutation()
+  const [createPayPalOrder] = useCreatePayPalOrderMutation()
+  const [capturePayPalOrder] = useCapturePayPalOrderMutation()
   
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
     firstName: user?.name?.split(' ')[0] || '',
@@ -118,6 +122,68 @@ export default function CheckoutPage() {
 
   const [shippingMethod, setShippingMethod] = useState('standard')
   const [saveInfo, setSaveInfo] = useState(false)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'paypal'>('card')
+
+  // Initialize Stripe PaymentIntent when entering Step 2 with Card selected
+  useEffect(() => {
+    const initStripePI = async () => {
+      if (currentStep !== 2 || selectedPaymentMethod !== 'card' || clientSecret) return
+      setIsLoading(true)
+      try {
+        const body: any = {
+          items: state.items.map((i: any) => ({ productId: i.id, quantity: i.quantity, color: i.color, size: i.size })),
+          shippingAddress: {
+            firstName: shippingInfo.firstName,
+            lastName: shippingInfo.lastName,
+            email: shippingInfo.email,
+            phone: shippingInfo.phone,
+            address: shippingInfo.address,
+            city: shippingInfo.city,
+            state: shippingInfo.state,
+            zipCode: shippingInfo.zipCode,
+            country: shippingInfo.country,
+          },
+          billingAddress: paymentInfo.sameAsShipping
+            ? {
+                address: shippingInfo.address,
+                city: shippingInfo.city,
+                state: shippingInfo.state,
+                zipCode: shippingInfo.zipCode,
+                country: shippingInfo.country,
+              }
+            : {
+                address: paymentInfo.billingAddress.address,
+                city: paymentInfo.billingAddress.city,
+                state: paymentInfo.billingAddress.state,
+                zipCode: paymentInfo.billingAddress.zipCode,
+                country: paymentInfo.billingAddress.country,
+              },
+          paymentMethod: 'stripe',
+          customerInfo: {
+            name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+            email: shippingInfo.email,
+            phone: shippingInfo.phone,
+          },
+          notes: '',
+          shippingMethod,
+        }
+        const res: any = await createPaymentIntent(body)
+        if (res?.data?.success) {
+          setClientSecret(res.data.data.clientSecret)
+          setCreatedOrderId(res.data.data.orderId)
+          setReadableOrderId(res.data.data.readableOrderId)
+        } else {
+          const message = res?.error?.data?.message || 'Failed to initialize payment'
+          dispatch(showModal({ type: 'error', title: 'Payment Init Error', message }))
+        }
+      } catch (err: any) {
+        dispatch(showModal({ type: 'error', title: 'Payment Init Error', message: err?.message || 'Unexpected error' }))
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    initStripePI()
+  }, [currentStep, selectedPaymentMethod, state.items, shippingInfo, paymentInfo.sameAsShipping, paymentInfo.billingAddress, shippingMethod])
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -146,67 +212,8 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!stripeKey) {
-      dispatch(showModal({
-        type: 'error',
-        title: 'Stripe Not Configured',
-        message: 'Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY. Please set it in your environment.'
-      }))
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      const items = state.items.map((i) => ({
-        productId: i.id,
-        quantity: i.quantity,
-        color: i.color,
-        size: i.size,
-      }))
-
-      const body = {
-        items,
-        shippingAddress: {
-          firstName: shippingInfo.firstName,
-          lastName: shippingInfo.lastName,
-          email: shippingInfo.email,
-          phone: shippingInfo.phone,
-          address: shippingInfo.address,
-          city: shippingInfo.city,
-          state: shippingInfo.state,
-          zipCode: shippingInfo.zipCode,
-          country: shippingInfo.country,
-        },
-        billingAddress: {
-          address: shippingInfo.address,
-          city: shippingInfo.city,
-          state: shippingInfo.state,
-          zipCode: shippingInfo.zipCode,
-          country: shippingInfo.country,
-        },
-        customerInfo: {
-          name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
-          email: shippingInfo.email,
-          phone: shippingInfo.phone,
-        },
-        shippingMethod,
-      }
-
-      const res: any = await createPaymentIntent(body)
-      if (res?.data?.success && res.data.data?.clientSecret) {
-        setClientSecret(res.data.data.clientSecret)
-        setCreatedOrderId(res.data.data.orderId)
-        setReadableOrderId(res.data.data.readableOrderId)
-        setCurrentStep(2)
-      } else {
-        const message = res?.error?.data?.message || 'Failed to create payment intent'
-        dispatch(showModal({ type: 'error', title: 'Payment Error', message }))
-      }
-    } catch (err: any) {
-      dispatch(showModal({ type: 'error', title: 'Payment Error', message: err?.message || 'Unexpected error' }))
-    } finally {
-      setIsLoading(false)
-    }
+    // Move payment initialization to Step 2 depending on selected method
+    setCurrentStep(2)
   }
 
   const handlePaymentSubmit = () => {
@@ -439,7 +446,88 @@ export default function CheckoutPage() {
                 </motion.div>
               )}
               
-              {currentStep >= 2 && clientSecret && stripePromise && (
+              {currentStep === 2 && (
+                <>
+                  <Card className="mb-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        Choose Payment Method
+                      </CardTitle>
+                      <CardDescription>Select how you want to pay</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPaymentMethod('card')}
+                          className={`w-full text-left border rounded-lg p-4 flex items-center gap-3 transition ${
+                            selectedPaymentMethod === 'card' ? 'border-primary ring-2 ring-primary/30' : 'border-muted'
+                          }`}
+                        >
+                          <CreditCard className="h-5 w-5" />
+                          <div>
+                            <div className="font-medium">Credit/Debit Card</div>
+                            <div className="text-xs text-muted-foreground">Secure Stripe checkout</div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPaymentMethod('paypal')}
+                          className={`w-full text-left border rounded-lg p-4 flex items-center gap-3 transition ${
+                            selectedPaymentMethod === 'paypal' ? 'border-primary ring-2 ring-primary/30' : 'border-muted'
+                          }`}
+                        >
+                          <Image src="/paypal.svg" alt="PayPal" width={24} height={24} />
+                          <div>
+                            <div className="font-medium">PayPal</div>
+                            <div className="text-xs text-muted-foreground">Log in to PayPal to pay</div>
+                          </div>
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedPaymentMethod === 'card' ? (
+                    clientSecret && stripePromise ? (
+                      <Elements stripe={stripePromise!} options={{ clientSecret }}>
+                        <StripePaymentForm
+                          paymentInfo={paymentInfo}
+                          setPaymentInfo={setPaymentInfo}
+                          onBack={() => setCurrentStep(1)}
+                          onNext={handlePaymentSubmit}
+                        />
+                      </Elements>
+                    ) : (
+                      <Card>
+                        <CardContent className="py-8">
+                          <div className="text-center text-sm text-muted-foreground">Preparing secure card payment...</div>
+                        </CardContent>
+                      </Card>
+                    )
+                  ) : (
+                    <PayPalPaymentPanel
+                      shippingInfo={shippingInfo}
+                      shippingMethod={shippingMethod}
+                      items={state.items}
+                      totals={{ subtotal, shippingCost, tax, total }}
+                      onBack={() => setCurrentStep(1)}
+                    />
+                  )}
+                </>
+              )}
+              {currentStep === 3 && selectedPaymentMethod === 'card' && clientSecret && stripePromise && (
+                <Elements stripe={stripePromise!} options={{ clientSecret }}>
+                  <StripeOrderReview
+                    order={{ shippingInfo, items: state.items, subtotal, shippingCost, tax, total }}
+                    onBack={() => setCurrentStep(2)}
+                    onSubmit={handleOrderSubmit}
+                    isLoading={isLoading}
+                  />
+                </Elements>
+              )}
+              
+              {false && currentStep >= 2 && clientSecret && stripePromise && (
                 <Elements stripe={stripePromise!} options={{ clientSecret }}>
                   {currentStep === 2 && (
                     <StripePaymentForm
@@ -459,7 +547,7 @@ export default function CheckoutPage() {
                   )}
                 </Elements>
               )}
-              {/* Steps 2 & 3 rendered above within a single shared Elements provider */}
+              {/* Steps 2 & 3 rendered above conditionally */}
             </AnimatePresence>
           </div>
           
@@ -691,6 +779,128 @@ function StripeOrderReview({ order, onBack, onSubmit, isLoading }: any) {
           <Button onClick={handleSubmit} disabled={isLoading || !stripe || !elements} className="flex-1">
             {isLoading ? "Processing..." : "Place Order"}
             <Lock className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// PayPal Payment Panel Component
+function PayPalPaymentPanel({ shippingInfo, shippingMethod, items, totals, onBack }: any) {
+  const dispatch = useAppDispatch()
+  const router = useRouter()
+  const { clearCart, state: cartState } = useCart()
+  const [createPayPalOrder] = useCreatePayPalOrderMutation()
+  const [capturePayPalOrder] = useCapturePayPalOrderMutation()
+
+  const { subtotal, shippingCost, tax, total } = totals || {}
+
+  const createOrderHandler = async () => {
+    try {
+      const body = {
+        items: items.map((i: any) => ({ productId: i.id, quantity: i.quantity, color: i.color, size: i.size })),
+        shippingAddress: {
+          firstName: shippingInfo.firstName,
+          lastName: shippingInfo.lastName,
+          email: shippingInfo.email,
+          phone: shippingInfo.phone,
+          address: shippingInfo.address,
+          city: shippingInfo.city,
+          state: shippingInfo.state,
+          zipCode: shippingInfo.zipCode,
+          country: shippingInfo.country,
+        },
+        billingAddress: {
+          address: shippingInfo.address,
+          city: shippingInfo.city,
+          state: shippingInfo.state,
+          zipCode: shippingInfo.zipCode,
+          country: shippingInfo.country,
+        },
+        customerInfo: {
+          name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+          email: shippingInfo.email,
+          phone: shippingInfo.phone,
+        },
+        shippingMethod,
+      }
+      const res: any = await createPayPalOrder(body)
+      if (res?.data?.success) {
+        return res.data.data.paypalOrderId
+      }
+      const message = res?.error?.data?.message || 'Failed to create PayPal order'
+      dispatch(showModal({ type: 'error', title: 'PayPal Error', message }))
+      throw new Error(message)
+    } catch (err: any) {
+      dispatch(showModal({ type: 'error', title: 'PayPal Error', message: err?.message || 'Unexpected error creating PayPal order' }))
+      throw err
+    }
+  }
+
+  const onApproveHandler = async (data: any) => {
+    try {
+      const res: any = await capturePayPalOrder({ paypalOrderId: data?.orderID })
+      if (res?.data?.success) {
+        const orderId = res.data.data.orderId
+        // Persist minimal order snapshot for the success page
+        try {
+          const existing = JSON.parse(localStorage.getItem('orders') || '[]')
+          const etaDays = shippingMethod === 'overnight' ? 1 : shippingMethod === 'express' ? 3 : 5
+          const newOrder = {
+            id: orderId,
+            items,
+            shipping: shippingInfo,
+            shippingMethod,
+            subtotal,
+            shippingCost,
+            tax,
+            total,
+            status: 'confirmed',
+            estimatedDelivery: new Date(Date.now() + etaDays * 24 * 60 * 60 * 1000).toISOString(),
+            createdAt: new Date().toISOString(),
+            payment: { method: 'paypal', status: 'paid' }
+          }
+          const orders = [newOrder, ...existing.filter((o: any) => o.id !== orderId)]
+          localStorage.setItem('orders', JSON.stringify(orders))
+        } catch (_) {}
+        // Clear cart locally and navigate
+        clearCart()
+        router.push(`/checkout/success?orderId=${orderId}`)
+      } else {
+        const message = res?.error?.data?.message || 'Failed to capture PayPal order'
+        dispatch(showModal({ type: 'error', title: 'PayPal Capture Error', message }))
+      }
+    } catch (err: any) {
+      dispatch(showModal({ type: 'error', title: 'PayPal Error', message: err?.message || 'Unexpected error capturing PayPal order' }))
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Image src="/paypal.svg" alt="PayPal" width={24} height={24} />
+          Pay with PayPal
+        </CardTitle>
+        <CardDescription>You'll be able to log in to your PayPal account to complete the purchase.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 z-0">
+        <PayPalScriptProvider options={{ clientId: paypalClientId || 'test', currency: 'USD' }}>
+          <PayPalButtons
+            style={{ layout: 'vertical', shape: 'rect', label: 'paypal' }}
+            createOrder={async () => await createOrderHandler()}
+            onApprove={async (data) => await onApproveHandler(data)}
+            onError={(err) => dispatch(showModal({ type: 'error', title: 'PayPal Error', message: (err as any)?.message || 'An error occurred with PayPal.' }))}
+            onCancel={() => dispatch(showModal({ type: 'warning', title: 'Payment Cancelled', message: 'You cancelled the PayPal payment.' }))}
+            className="z-[0]"
+          />
+        </PayPalScriptProvider>
+
+        <div className="flex flex-col md:flex-row gap-4">
+          <Button variant="outline" onClick={onBack} className="flex-1">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Shipping
           </Button>
         </div>
       </CardContent>
