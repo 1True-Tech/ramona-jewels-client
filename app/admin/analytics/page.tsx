@@ -271,7 +271,7 @@ export default function AdminAnalyticsPage() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold gradient-text">Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
           <p className="text-muted-foreground">Track your perfume store performance and insights</p>
         </motion.div>
 
