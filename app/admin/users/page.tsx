@@ -113,7 +113,7 @@ export default function AdminUsersPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full"
         >
           <div>
             <h1 className="text-3xl font-bold">Users Management</h1>
@@ -270,11 +270,11 @@ export default function AdminUsersPage() {
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }} 
           transition={{ delay: 0.3 }}
-          className="bg-card rounded-lg border overflow-hidden"
+          className="bg-card rounded-lg overflow-hidden"
         >
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b bg-muted/50">
+              <thead className="border-b gradient-primary text-white rounded-t-xl overflow-hidden">
                 <tr>
                   <th className="text-left py-3 px-4 font-medium">User</th>
                   <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">Contact</th>
@@ -293,13 +293,13 @@ export default function AdminUsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
-                    <tr key={user.id} className="border-b hover:bg-muted/50">
+                  users.map((user, index) => (
+                    <tr key={user.id} className={`border-l-2 border-r-2 border-gray-100 ${index % 2=== 0 ? "bg-gray-50" : "bg-white"}`}>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <UserAvatar 
                             user={user} 
-                            size="md" 
+                            size="sm" 
                             className="flex-shrink-0"
                           />
                           <div>

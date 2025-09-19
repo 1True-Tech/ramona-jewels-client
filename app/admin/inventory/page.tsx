@@ -333,7 +333,7 @@ export default function AdminInventoryPage() {
 
             <div className="overflow-x-auto">
               <table className="w-full rounded-t-xl overflow-hidden">
-                <thead className="border-b border-primary/20 gradient-primary text-white">
+                <thead className="border-b gradient-primary text-white rounded-t-xl overflow-hidden">
                   <tr className="border-b border-primary/20">
                     <th className="text-left py-3 px-4 font-medium">Product</th>
                     <th className="text-left py-3 px-4 font-medium">Type</th>
@@ -349,7 +349,7 @@ export default function AdminInventoryPage() {
                   {filteredProducts.map((product, index) => (
                     <tr
                       key={product._id}
-                      className="border-b border-amber-300 hover:bg-muted/50"
+                      className={`border-l-2 border-r-2 border-gray-100 ${index % 2=== 0 ? "bg-gray-50" : "bg-white"}`}
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">

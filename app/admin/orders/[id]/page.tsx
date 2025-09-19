@@ -156,18 +156,12 @@ export default function AdminOrderDetailPage() {
  
    const getStatusColor = (status: string) => {
      switch (status) {
-       case "delivered":
-         return "text-green-600 bg-green-100 dark:bg-green-900/20"
-       case "shipped":
-         return "text-blue-600 bg-blue-100 dark:bg-blue-900/20"
-       case "processing":
-         return "text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20"
-       case "pending":
-         return "text-orange-600 bg-orange-100 dark:bg-orange-900/20"
-       case "cancelled":
-         return "text-red-600 bg-red-100 dark:bg-red-900/20"
-       default:
-         return "text-gray-600 bg-gray-100 dark:bg-gray-900/20"
+        case "delivered": return "text-green-500 bg-green-50"
+        case "shipped": return "text-blue-500 bg-blue-50"
+        case "processing": return "text-yellow-500 bg-yellow-50"
+        case "pending": return "text-orange-300 bg-orange-50 border-none"
+        case "cancelled": return "text-red-500 bg-red-50"
+        default: return "text-gray-500 bg-gray-50"
      }
    }
 

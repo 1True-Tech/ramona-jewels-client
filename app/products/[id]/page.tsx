@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
@@ -35,6 +36,8 @@ import { useToast } from "@/hooks/use-toast"
 import { useGetReviewsByProductQuery, useCreateReviewMutation, Review } from '@/store/api/reviewsApi'
 import { useProductReviewsRealtime } from '@/hooks/use-product-reviews-realtime'
 import { toServerImageUrl } from "@/lib/utils/imageUtils"
+import { useWishlist } from "@/contexts/wishlist-context"
+import { useAuth } from "@/contexts/redux-auth-context"
 
 // Helper: build server/base URL for images
 // -const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
@@ -118,6 +121,8 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
   const { addItem } = useCart()
   const dispatch = useAppDispatch()
   const { toast } = useToast()
+  const { user } = useAuth()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
 
   // Reviews hooks/state
   const { data: reviews = [], isLoading: reviewsLoading } = useGetReviewsByProductQuery(productId)
@@ -205,6 +210,14 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
     .map(toUIProduct)
  
    const handleAddToCart = () => {
+     if (!user) {
+       toast({
+         title: "Login required",
+         description: "Please log in to add items to your cart.",
+         variant: "destructive",
+       })
+       return
+     }
      for (let i = 0; i < quantity; i++) {
        addItem({
          id: product.id,
@@ -244,9 +257,36 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
     }
   }
  
+   const handleWishlistToggle = () => {
+     if (!user) {
+       toast({
+         title: "Login required",
+         description: "Please log in to manage your wishlist.",
+         variant: "destructive",
+       })
+       return
+     }
+
+     const inWishlist = isInWishlist(product.id)
+     if (inWishlist) {
+       removeFromWishlist(product.id)
+       toast({ title: "Removed from wishlist" })
+     } else {
+       addToWishlist({
+         id: product.id,
+         name: product.name,
+         price: product.price,
+         image: product.image,
+         category: product.category,
+         type: product.type || 'perfume',
+       })
+       toast({ title: "Added to wishlist" })
+     }
+   }
+ 
    const discount = product.originalPrice
-     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-     : 0
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0
  
   const isJewelry = product.type === "jewelry"
 
@@ -312,7 +352,7 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
 
               <h1 className="text-3xl lg:text-4xl font-bold font-playfair mb-4 gradient-text">{product.name}</h1>
 
-              <div className="grid grid-cols-1 md: gap-4 mb-4">
+              <div className="grid grid-cols-1 md:gap-4 mb-4">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
@@ -458,10 +498,11 @@ const toUIProduct = (backendProduct: ApiProduct): ExtendedProduct => ({
                 <Button
                   variant="outline"
                   size="lg"
-                  className="flex-1 border-primary/20 hover:bg-primary/5 bg-transparent"
+                  className={`flex-1 border-primary/20 hover:bg-primary/5 bg-transparent ${isInWishlist(product.id) ? "text-red-500" : ""}`}
+                  onClick={handleWishlistToggle}
                 >
-                  <Heart className="h-4 w-4 mr-2" />
-                  Wishlist
+                  <Heart className={`h-4 w-4 mr-2 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
+                  {isInWishlist(product.id) ? "Wishlisted" : "Wishlist"}
                 </Button>
                 <Button
                   variant="outline"

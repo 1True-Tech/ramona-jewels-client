@@ -68,7 +68,7 @@ export function TopProducts() {
 
       <div className="overflow-x-auto rounded-t-xl overflow-y-hidden">
         <table className="min-w-full border-collapse rounded-xl">
-          <thead className="border-b border-primary bg-amber-400 text-white">
+          <thead className="border-b gradient-primary text-white !rounded-t-xl !overflow-hidden">
             <tr className="bg-muted text-left text-sm font-medium">
               <th className="p-3">Rank</th>
               <th className="p-3">Product</th>
@@ -80,12 +80,12 @@ export function TopProducts() {
             </tr>
           </thead>
           <tbody>
-            {topProducts.map((product) => (
+            {topProducts.map((product, index) => (
               <tr
                 key={product.id}
-                className="border-b border-primary hover:bg-muted/50 transition-colors"
+                className={`border-l-2 border-r-2 border-gray-100 ${index % 2=== 0 ? "bg-gray-50" : "bg-white"}`}
               >
-                <td className="p-3 font-bold">{product.rank}</td>
+                <td className="p-3 font-normal">{product.rank}</td>
 
                 {/* Product Image + Name */}
                 <td className="p-3 flex items-center gap-3">

@@ -20,7 +20,7 @@ export function HeroSection() {
   }, [])
 
   return (
-    <section className="relative bg-gradient-hero lg:h-screen overflow-hidden rounded-b-4xl lg:rounded-b-none">
+    <section className="relative bg-gradient-hero overflow-hidden rounded-b-4xl lg:rounded-b-none">
       {isChristmas ? (
       /* 🎄 Christmas Frame */
         <div className="absolute inset-0 rounded-b-3xl lg:rounded-b-none p-[6px] overflow-hidden
@@ -98,7 +98,7 @@ export function HeroSection() {
                 className="text-4xl lg:text-6xl font-bold font-playfair tracking-tight"
               >
                 Exquisite
-                <span className="gradient-text block">Jewelry & Fragrances</span>
+                <span className="gradient-text block pb-2 whitespace-nowrap">Jewelry & Fragrances</span>
               </motion.h1>
 
               <motion.p

@@ -17,7 +17,7 @@ export function CategorySection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl lg:text-4xl font-bold font-playfair gradient-text mb-4">Shop by Category</h2>
+          <h2 className="text-3xl lg:text-4xl font-bold font-playfair gradient-text pb-4">Shop by Category</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Explore our diverse collections of fine jewelry and luxury fragrances, each carefully curated for the
             discerning connoisseur.

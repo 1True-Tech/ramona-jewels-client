@@ -158,7 +158,7 @@ export default function AdminPaymentsPage() {
       case "completed":
         return <CheckCircle className="h-4 w-4 text-green-600" />
       case "pending":
-        return <Clock className="h-4 w-4 text-yellow-600" />
+        return <Clock className="h-4 w-4 text-orange-300" />
       case "processing":
         return <RefreshCw className="h-4 w-4 text-blue-600" />
       case "failed":
@@ -172,18 +172,12 @@ export default function AdminPaymentsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200"
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      case "processing":
-        return "bg-blue-100 text-blue-800 border-blue-200"
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-200"
-      case "refunded":
-        return "bg-orange-100 text-orange-800 border-orange-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+      case "delivered": return "text-green-500 bg-green-50"
+      case "shipped": return "text-blue-500 bg-blue-50"
+      case "processing": return "text-yellow-500 bg-yellow-50"
+      case "pending": return "text-orange-300 bg-orange-50 border-none"
+      case "cancelled": return "text-red-500 bg-red-50"
+      default: return "text-gray-500 bg-gray-50"
     }
   }
 
@@ -329,7 +323,7 @@ export default function AdminPaymentsPage() {
         {/* Payments Table */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Tabs defaultValue="transactions" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-amber-50 to-orange-50 gap-4 h-11">
+            <TabsList className="grid w-full grid-cols-3 gap-4 h-11">
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
               <TabsTrigger value="disputes">Disputes</TabsTrigger>
@@ -345,8 +339,8 @@ export default function AdminPaymentsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
+                    <table className="w-full !rounded-t-xl !overflow-hidden">
+                      <thead className="border-b gradient-primary text-white !rounded-t-xl !overflow-hidden">
                         <tr className="border-b border-primary/20">
                           <th className="text-left py-3 px-4 font-medium">Transaction</th>
                           <th className="text-left py-3 px-4 font-medium">Customer</th>
@@ -365,7 +359,7 @@ export default function AdminPaymentsPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            className="border-b border-primary/10 hover:bg-muted/50"
+                            className={`border-l-2 border-r-2 border-gray-100 ${index % 2=== 0 ? "bg-gray-50" : "bg-white"}`}
                           >
                             <td className="py-4 px-4">
                               <div>
