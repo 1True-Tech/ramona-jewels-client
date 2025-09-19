@@ -40,13 +40,8 @@ export const ordersApi = createApi({
     // Get all orders with pagination and filtering
     getOrders: builder.query<OrdersResponse, OrderQueryParams | void>({
       query: (params = {}) => {
-        const searchParams = new URLSearchParams()
-        Object.entries(params ?? {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
-            searchParams.append(key, String(value))
-          }
-        })
-        return `?${searchParams.toString()}`
+        const query = new URLSearchParams(params as any).toString()
+        return query ? `?${query}` : ''
       },
       providesTags: ['Orders'],
     }),
@@ -54,30 +49,22 @@ export const ordersApi = createApi({
     // Get my orders with pagination and filtering
     getMyOrders: builder.query<OrdersResponse, OrderQueryParams | void>({
       query: (params = {}) => {
-        const searchParams = new URLSearchParams()
-        Object.entries(params ?? {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
-            searchParams.append(key, String(value))
-          }
-        })
-        return `my-orders?${searchParams.toString()}`
+        const query = new URLSearchParams(params as any).toString()
+        return `my-orders${query ? `?${query}` : ''}`
       },
       providesTags: ['Orders'],
     }),
     
-    // Get order statistics
     getOrderStats: builder.query<OrderStatsResponse, void>({
       query: () => 'stats',
       providesTags: ['OrderStats'],
     }),
     
-    // Get single order
     getOrder: builder.query<{ success: boolean; data: Order }, string>({
       query: (id) => `/${id}`,
       providesTags: (result, error, id) => [{ type: 'Order', id }],
     }),
     
-    // Create Stripe PaymentIntent
     createStripePaymentIntent: builder.mutation<{ success: boolean; data: { clientSecret: string; orderId: string; readableOrderId: string; amount: number } }, any>({
       query: (body) => ({
         url: `/stripe/create-payment-intent`,
@@ -85,8 +72,24 @@ export const ordersApi = createApi({
         body,
       }),
     }),
-    
-    // Update order status
+
+    // New: PayPal create/capture endpoints
+    createPayPalOrder: builder.mutation<{ success: boolean; data: { paypalOrderId: string; approveLink?: string; orderId: string; readableOrderId: string; amount: number } }, any>({
+      query: (body) => ({
+        url: `/paypal/create-order`,
+        method: 'POST',
+        body,
+      }),
+    }),
+    capturePayPalOrder: builder.mutation<{ success: boolean; data: { orderId: string; status: string; paymentStatus: string } }, { paypalOrderId: string }>({
+      query: (body) => ({
+        url: `/paypal/capture-order`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (result, error, { paypalOrderId }) => ['Orders'],
+    }),
+
     updateOrderStatus: builder.mutation<{ success: boolean }, UpdateOrderStatusRequest>({
       query: ({ id, ...body }) => ({
         url: `/${id}/status`,
@@ -100,7 +103,6 @@ export const ordersApi = createApi({
       ],
     }),
     
-    // Cancel order
     cancelOrder: builder.mutation<{ success: boolean }, string>({
       query: (id) => ({
         url: `/${id}/cancel`,
@@ -113,7 +115,6 @@ export const ordersApi = createApi({
       ],
     }),
     
-    // Refund order
     refundOrder: builder.mutation<{ success: boolean }, { id: string; amount?: number; reason?: string }>({
       query: ({ id, ...body }) => ({
         url: `/${id}/refund`,
@@ -135,6 +136,9 @@ export const {
   useGetOrderStatsQuery,
   useGetOrderQuery,
   useCreateStripePaymentIntentMutation,
+  // New PayPal hooks
+  useCreatePayPalOrderMutation,
+  useCapturePayPalOrderMutation,
   useUpdateOrderStatusMutation,
   useCancelOrderMutation,
   useRefundOrderMutation,
