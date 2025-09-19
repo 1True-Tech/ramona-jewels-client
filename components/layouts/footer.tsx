@@ -89,7 +89,6 @@ export function Footer() {
           {/* Links */}
           <div className="space-y-4">
             <h3 className="font-semibold text-primary flex items-center space-x-2">
-              <Gem className="h-4 w-4" />
               <span>Jewelry</span>
             </h3>
             <ul className="space-y-2">
@@ -105,7 +104,6 @@ export function Footer() {
 
           <div className="space-y-4">
             <h3 className="font-semibold text-primary flex items-center space-x-2">
-              <Sparkles className="h-4 w-4" />
               <span>Fragrances</span>
             </h3>
             <ul className="space-y-2">

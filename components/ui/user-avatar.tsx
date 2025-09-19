@@ -37,7 +37,7 @@ export function UserAvatar({
   
   return (
     <div className={cn("relative", className)}>
-      <Avatar className={cn(sizeClasses[size], "border-2 border-background")}>
+      <Avatar className={cn(sizeClasses[size], "")}>
         {hasProfileImage && avatarUrl ? (
           <AvatarImage 
             src={avatarUrl} 

@@ -131,11 +131,11 @@ export function CategoryChart() {
             cy="50%"
             innerRadius={60}
             outerRadius={100}
-            paddingAngle={5}
+            paddingAngle={0.5}
             dataKey="value"
           >
             {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+              <Cell key={`cell-${index}`} fill={entry.color} className="w-2 h-2"/>
             ))}
           </Pie>
           <Tooltip formatter={(value) => [`${value}`, "Sales"]} />

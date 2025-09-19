@@ -134,12 +134,12 @@ export default function AdminOrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "delivered": return "text-green-600 bg-green-100 dark:bg-green-900/20"
-      case "shipped": return "text-blue-600 bg-blue-100 dark:bg-blue-900/20"
-      case "processing": return "text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20"
-      case "pending": return "text-orange-600 bg-orange-100 dark:bg-orange-900/20"
-      case "cancelled": return "text-red-600 bg-red-100 dark:bg-red-900/20"
-      default: return "text-gray-600 bg-gray-100 dark:bg-gray-900/20"
+      case "delivered": return "text-green-500 bg-green-50"
+      case "shipped": return "text-blue-500 bg-blue-50"
+      case "processing": return "text-yellow-500 bg-yellow-50"
+      case "pending": return "text-orange-300 bg-orange-50 border-none"
+      case "cancelled": return "text-red-500 bg-red-50"
+      default: return "text-gray-500 bg-gray-50"
     }
   }
 
@@ -204,7 +204,7 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-orange-600">{stats?.pending || 0}</p>
+                <p className="text-2xl font-bold text-orange-500">{stats?.pending || 0}</p>
               </div>
               <Clock className="h-8 w-8 text-orange-600" />
             </div>
@@ -283,7 +283,7 @@ export default function AdminOrdersPage() {
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }} 
           transition={{ delay: 0.3 }}
-          className="bg-card rounded-lg border overflow-hidden"
+          className="bg-card rounded-lg overflow-hidden"
         >
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -299,9 +299,9 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-b border-amber-300 hover:bg-muted/50">
-                    <td className="py-4 px-4">
+                {orders.map((order, idx) => (
+                  <tr key={idx} className={`border-l-2 border-r-2 border-gray-100 ${idx % 2=== 0 ? "bg-gray-50" : "bg-white"}`}>
+                    <td className="py-4 px-4"> 
                       <div>
                         <Link href={`/admin/orders/${order.id}`} className="font-medium text-primary hover:underline">
                           {order.id}
