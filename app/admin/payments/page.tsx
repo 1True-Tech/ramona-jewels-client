@@ -28,6 +28,8 @@ import { useGetOrdersQuery } from "@/store/api/ordersApi"
 // Comment unused imports
 // import { useAppDispatch } from "@/store/hooks"
 // import { showModal } from "@/store/slices/uiSlice"
+import Link from "next/link"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 
 
@@ -45,6 +47,10 @@ export default function AdminPaymentsPage() {
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [dateRange, setDateRange] = useState("all")
   const [filteredPayments, setFilteredPayments] = useState<any[]>([])
+  const [page, setPage] = useState<number>(1)
+  const [perPage, setPerPage] = useState<number>(10)
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(false)
+  const [selectedPayment, setSelectedPayment] = useState<any | null>(null)
 
   useEffect(() => {
     if (!hydrated) return
@@ -93,7 +99,6 @@ export default function AdminPaymentsPage() {
 
   useEffect(() => {
     let filtered = payments
-
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
@@ -104,40 +109,40 @@ export default function AdminPaymentsPage() {
           payment.transactionId.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     }
-
     // Filter by payment method
     if (selectedMethod !== "all") {
       filtered = filtered.filter((payment) => payment.method.toLowerCase().replace(/\s+/g, "-") === selectedMethod)
     }
-
     // Filter by status
     if (selectedStatus !== "all") {
       filtered = filtered.filter((payment) => payment.status === selectedStatus)
     }
-
     // Filter by date range
     if (dateRange !== "all") {
       const now = new Date()
       const threshold = new Date(now)
       switch (dateRange) {
-        case "today":
-          threshold.setHours(0, 0, 0, 0)
-          break
-        case "week":
-          threshold.setDate(now.getDate() - 7)
-          break
-        case "month":
-          threshold.setMonth(now.getMonth() - 1)
-          break
-        case "quarter":
-          threshold.setMonth(now.getMonth() - 3)
-          break
+        case "today": threshold.setHours(0, 0, 0, 0); break
+        case "week": threshold.setDate(now.getDate() - 7); break
+        case "month": threshold.setMonth(now.getMonth() - 1); break
+        case "quarter": threshold.setMonth(now.getMonth() - 3); break
       }
       filtered = filtered.filter((p) => new Date(p.date) >= threshold)
     }
-
     setFilteredPayments(filtered)
   }, [searchQuery, selectedMethod, selectedStatus, dateRange, payments])
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, selectedMethod, selectedStatus, dateRange])
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredPayments.length / perPage)), [filteredPayments.length, perPage])
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [page, totalPages])
+  const paginatedPayments = useMemo(() => {
+    const start = (page - 1) * perPage
+    return filteredPayments.slice(start, start + perPage)
+  }, [filteredPayments, page, perPage])
 
   const paymentMethods = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -353,7 +358,7 @@ export default function AdminPaymentsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredPayments.map((payment, index) => (
+                        {paginatedPayments.map((payment, index) => (
                           <motion.tr
                             key={payment.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -401,7 +406,7 @@ export default function AdminPaymentsPage() {
                             </td>
                             <td className="py-4 px-4">
                               <div className="flex items-center justify-end gap-2">
-                                <Button variant="ghost" size="sm" className="hover:bg-primary/10">
+                                <Button variant="ghost" size="sm" className="hover:bg-primary/10" onClick={() => { setSelectedPayment(payment); setDetailsOpen(true) }}>
                                   View Details
                                 </Button>
                                 {payment.status === "completed" && (
@@ -419,6 +424,40 @@ export default function AdminPaymentsPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Rows per page:</span>
+                      <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1) }}>
+                        <SelectTrigger className="w-24 border-primary/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground">Page {page} of {totalPages || 1}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages || totalPages === 0}
+                      >
+                        Next
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -501,6 +540,47 @@ export default function AdminPaymentsPage() {
             </TabsContent>
           </Tabs>
         </motion.div>
+
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Payment Details</DialogTitle>
+              <DialogDescription>Detailed information about this transaction</DialogDescription>
+            </DialogHeader>
+            {selectedPayment && (
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-muted-foreground">Transaction ID</div>
+                  <div className="font-medium break-all">{selectedPayment.transactionId || selectedPayment.id}</div>
+                  <div className="text-muted-foreground">Order</div>
+                  <div className="font-medium">{selectedPayment.orderId}</div>
+                  <div className="text-muted-foreground">Customer</div>
+                  <div className="font-medium">{selectedPayment.customer}</div>
+                  <div className="text-muted-foreground">Email</div>
+                  <div className="font-medium break-all">{selectedPayment.email}</div>
+                  <div className="text-muted-foreground">Method</div>
+                  <div><Badge variant="outline" className="border-primary/20">{selectedPayment.method}</Badge></div>
+                  <div className="text-muted-foreground">Status</div>
+                  <div className="flex items-center gap-2">{getStatusIcon(selectedPayment.status)}<Badge variant="outline" className={getStatusColor(selectedPayment.status)}>{selectedPayment.status}</Badge></div>
+                  <div className="text-muted-foreground">Gross</div>
+                  <div className="font-medium">${selectedPayment.amount.toLocaleString()}</div>
+                  <div className="text-muted-foreground">Fees</div>
+                  <div className="font-medium">${(selectedPayment.fees ?? 0).toLocaleString()}</div>
+                  <div className="text-muted-foreground">Net</div>
+                  <div className={`font-medium ${((selectedPayment.net ?? (selectedPayment.amount - (selectedPayment.fees ?? 0))) >= 0 ? "text-green-600" : "text-red-600")}`}>${(selectedPayment.net ?? (selectedPayment.amount - (selectedPayment.fees ?? 0))).toLocaleString()}</div>
+                  <div className="text-muted-foreground">Date</div>
+                  <div className="font-medium">{new Date(selectedPayment.date).toLocaleString()}</div>
+                </div>
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setDetailsOpen(false)}>Close</Button>
+                  <Link href={`/admin/orders/${selectedPayment.id || selectedPayment.orderId}`}>
+                    <Button>Open Order</Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   )
