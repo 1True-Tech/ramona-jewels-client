@@ -18,6 +18,8 @@ import Link from "next/link"
 import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
 import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 import { toServerImageUrl } from "@/lib/utils/imageUtils"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenuArrow } from "@radix-ui/react-dropdown-menu"
 
 export default function AdminInventoryPage() {
   const { user, hydrated } = useAuth()
@@ -63,6 +65,7 @@ export default function AdminInventoryPage() {
   const [selectedType, setSelectedType] = useState<string>("all")
   const [selectedCategory] = useState("")
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all")
+  const [selectAction, setSelectAction] = useState<string>("")
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -203,13 +206,13 @@ export default function AdminInventoryPage() {
       <div className="space-y-8">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">Inventory Management</h1>
               <p className="text-muted-foreground">Manage your jewelry and perfume inventory</p>
             </div>
-            <Link href="/admin/inventory/add">
-              <Button className="gradient-primary text-white">
+            <Link href="/admin/inventory/add" className="w-full md:w-auto">
+              <Button className="gradient-primary text-white w-full md:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
@@ -314,7 +317,7 @@ export default function AdminInventoryPage() {
               <SelectItem value="low">Low Stock (≤10)</SelectItem>
               <SelectItem value="out">Out of Stock</SelectItem>
             </SelectContent>
-            </Select>
+          </Select>
           </div>
         </motion.div>
 
@@ -336,6 +339,7 @@ export default function AdminInventoryPage() {
                 <thead className="border-b gradient-primary text-white rounded-t-xl overflow-hidden">
                   <tr className="border-b border-primary/20">
                     <th className="text-left py-3 px-4 font-medium">Product</th>
+                    <th className="text-left py-3 px-4 font-medium whitespace-nowrap">Name & Brand</th>
                     <th className="text-left py-3 px-4 font-medium">Type</th>
                     <th className="text-left py-3 px-4 font-medium">Category</th>
                     <th className="text-left py-3 px-4 font-medium">Price</th>
@@ -361,11 +365,13 @@ export default function AdminInventoryPage() {
                               className="object-cover"
                             />
                           </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
                           <div>
                             <p className="font-medium whitespace-nowrap">{product.name}</p>
                             <p className="text-sm text-muted-foreground line-clamp-1">{product.brand || 'No brand'}</p>
                           </div>
-                        </div>
                       </td>
                       <td className="py-4 px-4">
                         <Badge variant="outline" className="border-primary/20">
@@ -432,12 +438,12 @@ export default function AdminInventoryPage() {
                                 ? "Low Stock"
                                 : "In Stock"}
                           </Badge>
-                          <Badge
+                          {/* <Badge
                             variant={product.isActive ? "default" : "secondary"}
                             className="text-xs"
                           >
                             {product.isActive ? "Active" : "Inactive"}
-                          </Badge>
+                          </Badge> */}
                         </div>
                       </td>
                       <td className="py-4 px-4">
@@ -445,41 +451,97 @@ export default function AdminInventoryPage() {
                           ${(product.price * product.stock).toLocaleString()}
                         </span>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/products/${product._id}`}>
-                            <Button variant="ghost" size="icon">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Link href={`/admin/inventory/edit/${product._id}`}>
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleToggleStatus(product._id, product.isActive)}
-                            className={product.isActive ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"}
-                            title={product.isActive ? "Deactivate product" : "Activate product"}
-                          >
-                            {product.isActive ? (
-                              <AlertTriangle className="h-4 w-4" />
-                            ) : (
-                              <Package className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteProduct(product._id, product.name)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+
+                      <td>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="border-none text-center w-full focus:outline-none focus:ring-none focus:border-0">⋯</DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[10rem] bg-white">
+                            <DropdownMenuArrow className="fill-white" />
+                            <DropdownMenuItem className="pl-10">
+                              <Link href={`/products/${product._id}`} className="w-full">
+                                <Button variant="ghost" size="icon">
+                                  <span>Product Details</span>
+                                </Button>
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="pl-7">
+                              <Link href={`/admin/inventory/edit/${product._id}`}>
+                                <Button variant="ghost" size="icon">
+                                  <span>Edit Product</span>
+                                </Button>
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="pl-13">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleToggleStatus(product._id, product.isActive)}
+                                className={product.isActive ? "" : "text-orange-400"}
+                                title={product.isActive ? "Deactivate product" : "Activate product"}
+                              >
+                                {product.isActive ? (
+                                  <span className="">Deactivate Product</span>
+                                ) : (
+                                  <span className="">Activate Product</span>
+                                )}
+                              </Button>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="-ml-10">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteProduct(product._id, product.name)}
+                                className="w-full text-start text-red-500"
+                                title="Delete product"
+                              >
+                                Delete Product
+                              </Button>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
+                      {/* <td>
+                      <Select value={selectAction} onValueChange={(value: any) => setSelectAction(value)}>
+                        <SelectTrigger className="w-48 border-primary/20">
+                          <SelectValue placeholder="Actions" />
+                        </SelectTrigger>
+                        <SelectContent className="flex flex-col items-start justify-end gap-2">
+                          <div className="flex flex-col items-start justify-end gap-2">
+                            <Link href={`/products/${product._id}`} className="bg-red-100 w-full">
+                              <Button variant="ghost" size="icon">
+                                <span>Product Details</span>
+                              </Button>
+                            </Link>
+                            <Link href={`/admin/inventory/edit/${product._id}`}>
+                              <Button variant="ghost" size="icon">
+                                  <span>Edit Product</span>
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleStatus(product._id, product.isActive)}
+                              className={product.isActive ? "" : ""}
+                              title={product.isActive ? "Deactivate product" : "Activate product"}
+                            >
+                              {product.isActive ? (
+                                <span className="">Deactivate Product</span>
+                              ) : (
+                                <span className="">Activate Product</span>
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteProduct(product._id, product.name)}
+                              className="text-red-500"
+                            >
+                              <span>Delete Product</span>
+                            </Button>
+                          </div>
+                        </SelectContent>
+                      </Select>
+                      </td> */}
                     </tr>
                   ))}
                 </tbody>
