@@ -7,7 +7,7 @@ import { useGetProductPerformanceQuery } from "@/store/api/analyticsApi"
 import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 import { useGetProductTypesQuery } from "@/store/api/productTypesApi"
 import { useMemo } from "react"
-import { toServerImageUrl } from "@/lib/utils/imageUtils"
+// import { toServerImageUrl } from "@/lib/utils/imageUtils"
 
 export function TopProducts() {
   const { data, isLoading } = useGetProductPerformanceQuery({})
@@ -89,14 +89,14 @@ export function TopProducts() {
 
                 {/* Product Image + Name */}
                 <td className="p-3 flex items-center gap-3">
-                  <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                  {/* <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     <Image
                        src={toServerImageUrl(product.image)}
                        alt={product.name}
                        fill
                        className="object-cover"
                      />
-                  </div>
+                  </div> */}
                   <span className="font-medium truncate max-w-[150px] sm:max-w-none">
                     {product.name}
                   </span>

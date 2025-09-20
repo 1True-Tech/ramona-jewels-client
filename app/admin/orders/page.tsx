@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -28,6 +28,7 @@ import {
   ShoppingCart,
   Calendar,
 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 
 export default function AdminOrdersPage() {
@@ -37,6 +38,8 @@ export default function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all")
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
   
   // Helper to derive start/end dates from dateFilter
   const getDateRange = (filter: "all" | "today" | "week" | "month") => {
@@ -87,8 +90,20 @@ export default function AdminOrdersPage() {
    
    const orders = ordersResponse?.data || []
    const stats = statsResponse?.data
-  // removed unused mutations
 
+   const totalPages = useMemo(() => {
+     const total = orders.length
+     return Math.ceil(total / perPage) || 0
+   }, [orders, perPage])
+
+   const paginatedOrders = useMemo(() => {
+     const start = (page - 1) * perPage
+     return orders.slice(start, start + perPage)
+   }, [orders, page, perPage])
+
+   useEffect(() => {
+    setPage(1)
+  }, [searchQuery, selectedStatus, dateFilter])
   useEffect(() => {
     if (!hydrated) return
     if (!user || user.role !== "admin") {
@@ -299,7 +314,7 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order, idx) => (
+                {paginatedOrders.map((order, idx) => (
                   <tr key={idx} className={`border-l-2 border-r-2 border-gray-100 ${idx % 2=== 0 ? "bg-gray-50" : "bg-white"}`}>
                     <td className="py-4 px-4"> 
                       <div>
@@ -332,10 +347,10 @@ export default function AdminOrdersPage() {
                     <td className="py-4 px-4 hidden lg:table-cell">
                       <div>
                         <p className="font-medium">{order.items.length} items</p>
-                        <p className="text-sm text-muted-foreground">
+                        {/* <p className="text-sm text-muted-foreground">
                           {order.items.slice(0, 2).map((i: any) => i.name).join(", ")}
                           {order.items.length > 2 && ` +${order.items.length - 2} more`}
-                        </p>
+                        </p> */}
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -354,6 +369,40 @@ export default function AdminOrdersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Rows per page:</span>
+              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1) }}>
+                <SelectTrigger className="w-24 border-primary/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">Page {page} of {totalPages || 1}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages || totalPages === 0}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </motion.div>
       </div>

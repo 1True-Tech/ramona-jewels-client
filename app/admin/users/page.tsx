@@ -36,6 +36,9 @@ import {
   TrendingUp
 } from "lucide-react"
 import { Loader } from "@/components/ui/loader"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenuArrow } from "@radix-ui/react-dropdown-menu"
+import { getUserAvatarUrl } from "@/lib/utils/imageUtils"
 
 export default function AdminUsersPage() {
   const { user } = useAuth()
@@ -202,14 +205,15 @@ export default function AdminUsersPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {topUsers.map((topUser, index) => (
                 <div key={topUser.id} className="bg-muted/50 rounded-lg p-4 text-center">
-                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted mx-auto mb-2">
+                  {/* <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted mx-auto mb-2">
                     <Image
-                      src={topUser.avatar || "/placeholder.svg"}
+                      src={getUserAvatarUrl(topUser.avatar)}
                       alt={topUser.name}
-                      fill
-                      className="object-cover"
+                      width={48}
+                      height={48}
+                      className="rounded-full"
                     />
-                  </div>
+                  </div> */}
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <span className="text-lg font-bold text-yellow-600">#{index + 1}</span>
                     {index === 0 && <Crown className="h-4 w-4 text-yellow-600" />}
@@ -273,11 +277,12 @@ export default function AdminUsersPage() {
           className="bg-card rounded-lg overflow-hidden"
         >
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full overflow-y-none">
               <thead className="border-b gradient-primary text-white rounded-t-xl overflow-hidden">
                 <tr>
                   <th className="text-left py-3 px-4 font-medium">User</th>
-                  <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">Contact</th>
+                  <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">Email</th>
+                  <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">Phone</th>
                   <th className="text-left py-3 px-4 font-medium hidden md:table-cell">Role</th>
                   <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">Orders</th>
                   <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">Total Spent</th>
@@ -314,6 +319,10 @@ export default function AdminUsersPage() {
                             <Mail className="h-3 w-3" />
                             {user.email}
                           </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 hidden sm:table-cell">
+                        <div className="space-y-1">
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Phone className="h-3 w-3" />
                             {user.phone}
@@ -324,54 +333,62 @@ export default function AdminUsersPage() {
                         <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                           {user.role === "admin" ? (
                             <>
-                              <Shield className="h-3 w-3 mr-1" />
                               Admin
                             </>
                           ) : (
                             <>
-                              <User className="h-3 w-3 mr-1" />
                               Customer
                             </>
                           )}
                         </Badge>
                       </td>
-                      <td className="py-4 px-4 hidden lg:table-cell">
+                      <td className="py-4 px-4 hidden lg:table-cell text-center">
                         <span className="font-medium">{user.orders}</span>
                       </td>
-                      <td className="py-4 px-4 hidden lg:table-cell">
+                      <td className="py-4 px-4 hidden lg:table-cell text-center">
                         <span className="font-medium">${user.totalSpent.toFixed(2)}</span>
                       </td>
                       <td className="py-4 px-4">
                         <Badge 
                           variant={user.status === "active" ? "default" : "secondary"}
-                          className={user.status === "active" ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
+                          className={user.status === "active" ? "bg-green-100 text-green-800 hover:bg-green-200 border-none text-center" : "border-none text-center"}
                         >
                           {user.status}
                         </Badge>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <Link href={`/admin/users/${user.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleStatusChange(user.id, user.status === 'active' ? 'inactive' : 'active')}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <td className="py-4 px-4 overflow-y-none">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="w-full text-center">⋯</DropdownMenuTrigger>
+
+                          <DropdownMenuContent className="bg-white">
+                            <DropdownMenuArrow className="fill-white" />
+                            <div className="flex flex-col items-start gap-2">
+                              <Link href={`/admin/users/${user.id}`}>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="h-4 w-4" /> 
+                                  View
+                                </Button>
+                              </Link>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleStatusChange(user.id, user.status === 'active' ? 'inactive' : 'active')}
+                              >
+                                  <Edit className="h-4 w-4" />
+                                  Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => handleDeleteUser(user.id)}
+                              >
+                                <Trash2 className="h-4 w-4" /> 
+                                Delete
+                              </Button>
+                            </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))

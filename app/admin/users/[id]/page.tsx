@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import Image from "next/image"
+// Removed unused Image import
+// import Image from "next/image"
 import Link from "next/link"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
@@ -28,82 +29,76 @@ import {
   Truck,
   Star
 } from "lucide-react"
-
-// Mock user data
-const mockUser = {
-  id: "1",
-  name: "Alice Johnson",
-  email: "alice@example.com",
-  phone: "+1 (555) 123-4567",
-  role: "customer",
-  status: "active",
-  joinDate: "2024-01-15",
-  lastLogin: "2024-03-15",
-  avatar: "/placeholder.svg",
-  address: {
-    street: "123 Main Street",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "United States"
-  },
-  stats: {
-    totalOrders: 12,
-    totalSpent: 2450.00,
-    averageOrderValue: 204.17,
-    favoriteCategory: "Perfumes"
-  }
-}
-
-// Mock orders data
-const mockOrders = [
-  {
-    id: "ORD-001",
-    date: "2024-03-10",
-    status: "delivered",
-    total: 299.99,
-    items: [
-      { id: "1", name: "Midnight Rose" },
-      { id: "2", name: "Ocean Breeze" }
-    ]
-  },
-  {
-    id: "ORD-002",
-    date: "2024-03-05",
-    status: "shipped",
-    total: 189.99,
-    items: [
-      { id: "3", name: "Velvet Oud" }
-    ]
-  },
-  {
-    id: "ORD-003",
-    date: "2024-02-28",
-    status: "processing",
-    total: 449.99,
-    items: [
-      { id: "4", name: "Garden Party" },
-      { id: "5", name: "Citrus Burst" },
-      { id: "6", name: "Mystic Woods" }
-    ]
-  }
-]
+import { useGetAdminUserQuery } from "@/store/api/adminApi"
+import { useGetOrdersQuery } from "@/store/api/ordersApi"
 
 export default function AdminUserProfilePage() {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, hydrated } = useAuth()
   const router = useRouter()
   const params = useParams()
-  const [user, setUser] = useState(mockUser)
-  const [orders, setOrders] = useState(mockOrders)
+  // Comment out legacy mock-based state to avoid duplicate identifiers with fetched data
+
+  const id = (params?.id as string) || ""
+
+  const skipAuth = !hydrated || !currentUser || currentUser.role !== "admin" || !id
+  const { data: userResp, isLoading: userLoading, error: userError } = useGetAdminUserQuery(id, {
+    skip: skipAuth,
+    refetchOnMountOrArgChange: true,
+  })
+  const user = userResp?.data
+
+  const { data: ordersResp, isLoading: ordersLoading } = useGetOrdersQuery(
+    user?.email ? { search: user.email, limit: 100 } : undefined,
+    { skip: skipAuth || !user?.email, refetchOnMountOrArgChange: true }
+  )
+  const allOrders = ordersResp?.data || []
+  const orders = allOrders.filter((o: any) => o.userId === user?.id)
 
   useEffect(() => {
+    if (!hydrated) return
     if (!currentUser || currentUser.role !== "admin") {
       router.push("/auth/login")
     }
-  }, [currentUser, router])
+  }, [currentUser, hydrated, router])
+
+  if (!hydrated) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   if (!currentUser || currentUser.role !== "admin") {
     return null
+  }
+
+  if (userLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  if (userError || !user) {
+    return (
+      <AdminLayout>
+        <div className="p-6">
+          <Link href="/admin/users">
+            <Button variant="ghost" size="sm" className="mb-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Users
+            </Button>
+          </Link>
+          <div className="text-red-600">{userError ? "Failed to load user details" : "User not found"}</div>
+        </div>
+      </AdminLayout>
+    )
   }
 
   const getStatusColor = (status: string) => {
@@ -124,6 +119,11 @@ export default function AdminUserProfilePage() {
       default: return <Package className="h-4 w-4" />
     }
   }
+
+  const totalOrders = typeof user.orders === "number" ? user.orders : orders.length
+  const totalSpent = typeof user.totalSpent === "number" ? user.totalSpent : orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+  const averageOrderValue = totalOrders ? totalSpent / totalOrders : 0
+  const lastActiveDate = user.lastActivity ? new Date(user.lastActivity).toLocaleDateString() : "-"
 
   return (
     <AdminLayout>
@@ -152,7 +152,7 @@ export default function AdminUserProfilePage() {
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="flex items-center gap-4">
               <UserAvatar 
-                user={user} 
+                user={user as any} 
                 size="xl" 
                 className="w-20 h-20"
               />
@@ -182,15 +182,15 @@ export default function AdminUserProfilePage() {
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center lg:text-left">
                 <p className="text-sm text-muted-foreground">Total Orders</p>
-                <p className="text-2xl font-bold">{user.stats.totalOrders}</p>
+                <p className="text-2xl font-bold">{totalOrders}</p>
               </div>
               <div className="text-center lg:text-left">
                 <p className="text-sm text-muted-foreground">Total Spent</p>
-                <p className="text-2xl font-bold">${user.stats.totalSpent.toFixed(2)}</p>
+                <p className="text-2xl font-bold">${totalSpent.toFixed(2)}</p>
               </div>
               <div className="text-center lg:text-left">
                 <p className="text-sm text-muted-foreground">Avg Order Value</p>
-                <p className="text-2xl font-bold">${user.stats.averageOrderValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold">${averageOrderValue.toFixed(2)}</p>
               </div>
               <div className="text-center lg:text-left">
                 <p className="text-sm text-muted-foreground">Member Since</p>
@@ -198,24 +198,44 @@ export default function AdminUserProfilePage() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
-              <Button className="w-full">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit User
-              </Button>
-              <Button variant="outline" className="w-full">
+            <div className="flex items-center gap-2 self-start lg:self-center">
+              <Button variant={user.status === "active" ? "destructive" : "secondary"} size="sm">
                 {user.status === "active" ? (
                   <>
                     <Ban className="h-4 w-4 mr-2" />
-                    Suspend
+                    Suspend User
                   </>
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Activate
+                    Activate User
                   </>
                 )}
               </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <div className="bg-muted/50 rounded-lg p-4 flex items-center gap-3">
+              <ShoppingBag className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Orders</p>
+                <p className="text-xl font-bold">{totalOrders}</p>
+              </div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 flex items-center gap-3">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Spent</p>
+                <p className="text-xl font-bold">${totalSpent.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 flex items-center gap-3">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Last Activity</p>
+                <p className="text-xl font-bold">{lastActiveDate}</p>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -226,15 +246,15 @@ export default function AdminUserProfilePage() {
           animate={{ opacity: 1, y: 0 }} 
           transition={{ delay: 0.2 }}
         >
-          <Tabs defaultValue="details" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="details" className="space-y-4">
+            <TabsList>
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="orders">Orders</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Contact Information */}
                 <div className="bg-card rounded-lg border p-6">
                   <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
@@ -256,8 +276,8 @@ export default function AdminUserProfilePage() {
                     <div className="flex items-center gap-3">
                       <Calendar className="h-5 w-5 text-muted-foreground" />
                       <div>
-                        <p className="font-medium">{new Date(user.lastLogin).toLocaleDateString()}</p>
-                        <p className="text-sm text-muted-foreground">Last Login</p>
+                        <p className="font-medium">{lastActiveDate}</p>
+                        <p className="text-sm text-muted-foreground">Last Activity</p>
                       </div>
                     </div>
                   </div>
@@ -269,11 +289,11 @@ export default function AdminUserProfilePage() {
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
                     <div>
-                      <p className="font-medium">{user.address.street}</p>
+                      <p className="font-medium">{user as any && (user as any).address ? (user as any).address.street || '-' : '-'}</p>
                       <p className="text-muted-foreground">
-                        {user.address.city}, {user.address.state} {user.address.zipCode}
+                        {(user as any && (user as any).address ? (user as any).address.city || '-' : '-')}, {(user as any && (user as any).address ? (user as any).address.state || '' : '')} {(user as any && (user as any).address ? (user as any).address.zipCode || '' : '')}
                       </p>
-                      <p className="text-muted-foreground">{user.address.country}</p>
+                      <p className="text-muted-foreground">{user as any && (user as any).address ? (user as any).address.country || '-' : '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -286,59 +306,68 @@ export default function AdminUserProfilePage() {
                   <h3 className="text-lg font-semibold">Order History</h3>
                   <p className="text-muted-foreground">All orders placed by this user</p>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b bg-muted/50">
-                      <tr>
-                        <th className="text-left py-3 px-6 font-medium">Order ID</th>
-                        <th className="text-left py-3 px-6 font-medium">Date</th>
-                        <th className="text-left py-3 px-6 font-medium">Status</th>
-                        <th className="text-left py-3 px-6 font-medium">Items</th>
-                        <th className="text-left py-3 px-6 font-medium">Total</th>
-                        <th className="text-left py-3 px-6 font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((order) => (
-                        <tr key={order.id} className="border-b hover:bg-muted/50">
-                          <td className="py-4 px-6">
-                            <Link href={`/admin/orders/${order.id}`} className="font-medium text-primary hover:underline">
-                              {order.id}
-                            </Link>
-                          </td>
-                          <td className="py-4 px-6">
-                            {new Date(order.date).toLocaleDateString()}
-                          </td>
-                          <td className="py-4 px-6">
-                            <Badge className={getStatusColor(order.status)}>
-                              {getStatusIcon(order.status)}
-                              <span className="ml-1 capitalize">{order.status}</span>
-                            </Badge>
-                          </td>
-                          <td className="py-4 px-6">
-                            <div>
-                              <p className="font-medium">{order.items.length} items</p>
-                              <p className="text-sm text-muted-foreground">
-                                {order.items.slice(0, 2).map((i: any) => i.name).join(", ")}
-                                {order.items.length > 2 && ` +${order.items.length - 2} more`}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className="font-medium">${order.total.toFixed(2)}</span>
-                          </td>
-                          <td className="py-4 px-6">
-                            <Link href={`/admin/orders/${order.id}`}>
-                              <Button variant="ghost" size="sm">
-                                View Details
-                              </Button>
-                            </Link>
-                          </td>
+                {ordersLoading ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="border-b bg-muted/50">
+                        <tr>
+                          <th className="text-left py-3 px-6 font-medium">Order ID</th>
+                          <th className="text-left py-3 px-6 font-medium">Date</th>
+                          <th className="text-left py-3 px-6 font-medium">Status</th>
+                          <th className="text-left py-3 px-6 font-medium">Items</th>
+                          <th className="text-left py-3 px-6 font-medium">Total</th>
+                          <th className="text-left py-3 px-6 font-medium">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {orders.map((order: any) => (
+                          <tr key={order.id} className="border-b hover:bg-muted/50">
+                            <td className="py-4 px-6">
+                              <Link href={`/admin/orders/${order.id}`} className="font-medium text-primary hover:underline">
+                                {order.id}
+                              </Link>
+                            </td>
+                            <td className="py-4 px-6">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-4 px-6">
+                              <Badge className={getStatusColor(order.status)}>
+                                {getStatusIcon(order.status)}
+                                <span className="ml-1 capitalize">{order.status}</span>
+                              </Badge>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div>
+                                <p className="font-medium">{order.items.length} items</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {order.items.slice(0, 2).map((i: any) => i.name).join(", ")}
+                                  {order.items.length > 2 && ` +${order.items.length - 2} more`}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className="font-medium">${(order.total || 0).toFixed(2)}</span>
+                            </td>
+                            <td className="py-4 px-6">
+                              <Link href={`/admin/orders/${order.id}`}>
+                                <Button variant="ghost" size="sm">
+                                  View Details
+                                </Button>
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {orders.length === 0 && (
+                      <div className="text-center text-muted-foreground py-8">No orders found for this user.</div>
+                    )}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -349,22 +378,22 @@ export default function AdminUserProfilePage() {
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                     <ShoppingBag className="h-5 w-5 text-primary" />
                     <div className="flex-1">
-                      <p className="font-medium">Placed order #ORD-001</p>
-                      <p className="text-sm text-muted-foreground">March 10, 2024 at 2:30 PM</p>
+                      <p className="font-medium">Placed an order</p>
+                      <p className="text-sm text-muted-foreground">{lastActiveDate}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                     <User className="h-5 w-5 text-blue-600" />
                     <div className="flex-1">
                       <p className="font-medium">Updated profile information</p>
-                      <p className="text-sm text-muted-foreground">March 8, 2024 at 11:15 AM</p>
+                      <p className="text-sm text-muted-foreground">{lastActiveDate}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                     <Star className="h-5 w-5 text-yellow-600" />
                     <div className="flex-1">
-                      <p className="font-medium">Left a review for "Midnight Rose"</p>
-                      <p className="text-sm text-muted-foreground">March 5, 2024 at 4:45 PM</p>
+                      <p className="font-medium">Left a review</p>
+                      <p className="text-sm text-muted-foreground">{lastActiveDate}</p>
                     </div>
                   </div>
                 </div>

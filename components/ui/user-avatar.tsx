@@ -10,8 +10,12 @@ import { User } from "lucide-react"
 interface UserAvatarProps {
   user?: {
     name?: string
-    avatar?: string
+    avatar?: string | null
     email?: string
+    // Support common backend field names as fallbacks
+    image?: string | null
+    photo?: string | null
+    profileImage?: string | null
   } | null
   size?: "sm" | "md" | "lg" | "xl"
   className?: string
@@ -31,13 +35,14 @@ export function UserAvatar({
   className,
   showOnlineStatus = false 
 }: UserAvatarProps) {
-  const avatarUrl = getUserAvatarUrl(user?.avatar)
-  const hasProfileImage = hasUserProfileImage(user?.avatar)
+  const rawAvatar = user?.avatar ?? user?.image ?? user?.photo ?? user?.profileImage ?? null
+  const avatarUrl = getUserAvatarUrl(rawAvatar)
+  const hasProfileImage = hasUserProfileImage(rawAvatar)
   const initials = getUserInitials(user?.name)
   
   return (
     <div className={cn("relative", className)}>
-      <Avatar className={cn(sizeClasses[size], "")}>
+      <Avatar className={cn(sizeClasses[size], "")}> 
         {hasProfileImage && avatarUrl ? (
           <AvatarImage 
             src={avatarUrl} 
@@ -66,14 +71,19 @@ export function UserProfileImage({
 }: {
   user?: {
     name?: string
-    avatar?: string
+    avatar?: string | null
+    // Support common backend field names as fallbacks
+    image?: string | null
+    photo?: string | null
+    profileImage?: string | null
   } | null
   width?: number
   height?: number
   className?: string
 }) {
-  const avatarUrl = getUserAvatarUrl(user?.avatar)
-  const hasProfileImage = hasUserProfileImage(user?.avatar)
+  const rawAvatar = user?.avatar ?? user?.image ?? user?.photo ?? user?.profileImage ?? null
+  const avatarUrl = getUserAvatarUrl(rawAvatar)
+  const hasProfileImage = hasUserProfileImage(rawAvatar)
   const initials = getUserInitials(user?.name)
   
   if (hasProfileImage && avatarUrl) {
