@@ -14,17 +14,17 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <main className="container mx-auto max-w-6xl px-4 py-12">
+    <main className="container md:mx-auto max-w-6xl px-2 py-10">
       {/* Hero */}
       <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary via-transparent to-primary py-10 px-4 md:p-14">
         <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-primary blur-3xl" />
         <div className="absolute -bottom-24 -left-24 h-64 w-74 rounded-full bg-primary blur-3xl" />
 
 
-        <div className="relative z-10 grid gap-8 md:grid-cols-[1.2fr_0.8fr] md:items-center">
+        <div className="relative z-10 grid gap-4 md:grid-cols-[1.2fr_0.8fr] md:items-center">
           <div className="space-y-6">
             <Badge className="bg-primary/15 text-primary border-primary/20">Our Story</Badge>
-            <h1 className="font-playfair text-4xl md:text-5xl">Crafting Timeless Elegance</h1>
+            <h1 className="font-playfair text-3xl md:text-5xl">Crafting Timeless Elegance</h1>
             <p className="text-muted-foreground text-base md:text-lg">
               At Ramona Jewels, we believe every piece should tell your story. From ethically sourced materials 
               to meticulous artistry, our creations are designed to be treasured for a lifetime.
