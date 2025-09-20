@@ -23,8 +23,10 @@ export default function AboutPage() {
 
         <div className="relative z-10 grid gap-4 md:grid-cols-[1.2fr_0.8fr] md:items-center">
           <div className="space-y-6">
-            <Badge className="bg-primary/15 text-primary border-primary/20">Our Story</Badge>
-            <h1 className="font-playfair text-3xl md:text-5xl">Crafting Timeless Elegance</h1>
+            <Link href="/">
+              <Badge className="bg-primary/15 text-primary border-primary/20">Back Home</Badge>
+            </Link> 
+            <h1 className="font-playfair text-4xl md:text-5xl">Crafting Timeless Elegance</h1>
             <p className="text-muted-foreground text-base md:text-lg">
               At Ramona Jewels, we believe every piece should tell your story. From ethically sourced materials 
               to meticulous artistry, our creations are designed to be treasured for a lifetime.
