@@ -35,6 +35,7 @@ import {
   useCreateProductTypeMutation,
   useDeleteProductTypeMutation,
 } from "@/store/api/productTypesApi"
+import { Loader } from "@/components/ui/loader"
 
 export default function CategoriesPage() {
   const dispatch = useAppDispatch()
@@ -175,7 +176,7 @@ export default function CategoriesPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader message="Loading product types..." />
         </div>
       </AdminLayout>
     )
