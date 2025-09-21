@@ -19,7 +19,7 @@ export function MobileNav() {
     { name: "Cart", href: "/cart", icon: ShoppingCart, badge: state.itemCount > 0 ? state.itemCount : null }, // Only show if > 0 },
     {
       name: "Profile",
-      href: user ? (user.role === "admin" ? "/admin" : "/profile") : "/",
+      href: user ? (user.role === "admin" ? "/admin" : "/profile") : "/auth/login",
       icon: User,
     },
   ]
