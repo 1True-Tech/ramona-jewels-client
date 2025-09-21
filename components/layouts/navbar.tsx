@@ -39,7 +39,7 @@ export function Navbar() {
               </div>
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold font-playfair gradient-text whitespace-nowrap">Mona's Kreashon</span>
+              <span className="text-lg md:text-xl font-bold font-playfair gradient-text whitespace-nowrap">Mona's Kreashon</span>
               <span className="text-xs text-muted-foreground -mt-1">Jewelry & Fragrances</span>
             </div>
           </Link>

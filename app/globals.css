@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @custom-variant hover (&:hover);
 
+
+/* globals.css */
+html, body {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+}
+
 /* Root Variables */
 :root {
   --font-inter: 'Inter', sans-serif;
