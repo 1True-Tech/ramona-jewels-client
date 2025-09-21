@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
 import { useWishlist } from "@/contexts/wishlist-context"
 import { useAuth } from "@/contexts/redux-auth-context"
+import Image from "next/image"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -33,12 +34,12 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group md:pr-10">
             <div className="relative">
-              <div className="h-10 w-10 gradient-primary rounded-full flex items-center justify-center jewelry-sparkle">
-                <Gem className="h-5 w-5 text-white" />
+              <div className="h-10 w-10 gradient-primary rounded-full p-[2px] flex items-center justify-center jewelry-sparkle overflow-hidden">
+                <Image src="/Ramona-Logo.jpg" alt="Ramona Jewels" width={100} height={100} className="rounded-full"/>
               </div>
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold font-playfair gradient-text whitespace-nowrap">Ramona Jewels</span>
+              <span className="text-xl font-bold font-playfair gradient-text whitespace-nowrap">Mona's Kreashon</span>
               <span className="text-xs text-muted-foreground -mt-1">Jewelry & Fragrances</span>
             </div>
           </Link>

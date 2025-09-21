@@ -20,16 +20,11 @@ import {
 } from "@/store/api/adminApi"
 import { 
   Search, 
-  Filter, 
-  MoreHorizontal, 
   Eye, 
   Edit, 
   Trash2, 
-  UserPlus,
   Mail,
   Phone,
-  Calendar,
-  CircleUserRound,
   Shield,
   User,
   Crown,
@@ -37,8 +32,7 @@ import {
 } from "lucide-react"
 import { Loader } from "@/components/ui/loader"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { DropdownMenuArrow } from "@radix-ui/react-dropdown-menu"
-import { getUserAvatarUrl } from "@/lib/utils/imageUtils"
+
 
 export default function AdminUsersPage() {
   const { user } = useAuth()
@@ -122,10 +116,6 @@ export default function AdminUsersPage() {
             <h1 className="text-3xl font-bold">Users Management</h1>
             <p className="text-muted-foreground">Manage customer accounts and administrators</p>
           </div>
-          <Button className="w-full sm:w-auto">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
         </motion.div>
 
         {/* Stats Cards */}
@@ -202,34 +192,31 @@ export default function AdminUsersPage() {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {topUsers.map((topUser, index) => (
-                <div key={topUser.id} className="bg-muted/50 rounded-lg p-4 text-center">
-                  {/* <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted mx-auto mb-2">
-                    <Image
-                      src={getUserAvatarUrl(topUser.avatar)}
-                      alt={topUser.name}
-                      width={48}
-                      height={48}
-                      className="rounded-full"
-                    />
-                  </div> */}
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <span className="text-lg font-bold text-yellow-600">#{index + 1}</span>
-                    {index === 0 && <Crown className="h-4 w-4 text-yellow-600" />}
+              <>
+                {topUsers.length < 1 || topUsers.length === undefined ? (
+                  <div className="text-center text-gray-500">No Top Users</div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {topUsers.map((topUser, index) => (
+                      <div key={topUser.id} className="bg-muted/50 rounded-lg p-4 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <span className="text-lg font-bold text-yellow-600">#{index + 1}</span>
+                          {index === 0 && <Crown className="h-4 w-4 text-yellow-600" />}
+                        </div>
+                        <p className="font-medium text-sm truncate">{topUser.name}</p>
+                        <p className="text-xs text-muted-foreground">{topUser.orders} orders</p>
+                        <p className="text-xs font-medium text-green-600">${topUser.totalSpent.toFixed(2)}</p>
+                        <Badge 
+                          variant={topUser.status === "active" ? "default" : "secondary"}
+                          className="mt-1 text-xs"
+                        >
+                          {topUser.status}
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
-                  <p className="font-medium text-sm truncate">{topUser.name}</p>
-                  <p className="text-xs text-muted-foreground">{topUser.orders} orders</p>
-                  <p className="text-xs font-medium text-green-600">${topUser.totalSpent.toFixed(2)}</p>
-                  <Badge 
-                    variant={topUser.status === "active" ? "default" : "secondary"}
-                    className="mt-1 text-xs"
-                  >
-                    {topUser.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+                )}
+              </>
           )}
         </motion.div>
 
@@ -330,7 +317,7 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4 hidden md:table-cell">
-                        <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                        <Badge variant={user.role === "admin" ? "default" : "secondary"} className="border-none">
                           {user.role === "admin" ? (
                             <>
                               Admin
@@ -351,22 +338,21 @@ export default function AdminUsersPage() {
                       <td className="py-4 px-4">
                         <Badge 
                           variant={user.status === "active" ? "default" : "secondary"}
-                          className={user.status === "active" ? "bg-green-100 text-green-800 hover:bg-green-200 border-none text-center" : "border-none text-center"}
+                          className={user.status === "active" ? "bg-green-100 text-green-800 hover:bg-green-200 border-none text-center" : "border-none text-center bg-red-100 text-red-800"}
                         >
                           {user.status}
                         </Badge>
                       </td>
                       <td className="py-4 px-4 overflow-y-none">
                         <DropdownMenu>
-                          <DropdownMenuTrigger className="w-full text-center">⋯</DropdownMenuTrigger>
-
+                          <DropdownMenuTrigger className="w-full text-center border-none">⋯</DropdownMenuTrigger>
+                          
                           <DropdownMenuContent className="bg-white">
-                            <DropdownMenuArrow className="fill-white" />
                             <div className="flex flex-col items-start gap-2">
                               <Link href={`/admin/users/${user.id}`}>
                                 <Button variant="ghost" size="sm">
                                   <Eye className="h-4 w-4" /> 
-                                  View
+                                  View Details
                                 </Button>
                               </Link>
                               <Button 
@@ -375,7 +361,7 @@ export default function AdminUsersPage() {
                                 onClick={() => handleStatusChange(user.id, user.status === 'active' ? 'inactive' : 'active')}
                               >
                                   <Edit className="h-4 w-4" />
-                                  Edit
+                                  {user.status === 'active' ? 'Deactivate' : 'Activate'}
                               </Button>
                               <Button 
                                 variant="ghost" 

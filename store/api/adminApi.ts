@@ -141,7 +141,7 @@ export const adminApi = createApi({
       query: ({ id, isActive }) => ({
         url: `users/${id}/status`,
         method: 'PATCH',
-        body: { isActive },
+        body: { status: isActive ? 'active' : 'inactive' },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'AdminUser', id },

@@ -408,7 +408,7 @@ export default function AdminInventoryPage() {
                             type="number"
                             value={product.stock}
                             onChange={(e) => handleUpdateStock(product._id, Number.parseInt(e.target.value) || 0)}
-                            className="w-20 h-8 text-center border-primary/20"
+                            className="w-20 h-8 text-center border-primary"
                             min="0"
                           />
                           <span className="text-xs text-muted-foreground">units</span>
@@ -428,8 +428,8 @@ export default function AdminInventoryPage() {
                               product.stock === 0
                                 ? ""
                                 : product.stock <= 10
-                                  ? "bg-orange-100 text-orange-800 border-orange-200"
-                                  : "bg-green-100 text-green-800 border-green-200"
+                                  ? "bg-orange-100 text-orange-800 border-0"
+                                  : "bg-green-100 text-green-800 border-0"
                             }
                           >
                             {product.stock === 0
@@ -447,7 +447,7 @@ export default function AdminInventoryPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="font-medium gradient-text">
+                        <span className="font-medium gradient-text border-none">
                           ${(product.price * product.stock).toLocaleString()}
                         </span>
                       </td>

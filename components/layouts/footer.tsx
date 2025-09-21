@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Facebook, Twitter, Instagram, Youtube, Gem, Sparkles, Mail, Phone, MapPin, Activity, ShieldCheck, Truck, RefreshCw } from "lucide-react"
+import Image from "next/image"
 
 export function Footer() {
   const footerLinks = {
@@ -39,15 +40,17 @@ export function Footer() {
   return (
     <footer className="bg-gradient-to-br from-[#fffdf9] to-[#fffdfa] border-t border-primary mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8">
+        <div className="flex flex-col md:flex-row md:justify-between gap-8">
           {/* Brand */}
           <div className="lg:col-span-2 space-y-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 gradient-primary rounded-full flex items-center justify-center jewelry-sparkle">
-                <Gem className="h-4 w-4 text-white" />
+            <Link href="/" className="flex items-center space-x-2 group md:pr-10">
+              <div className="relative">
+                <div className="h-10 w-10 gradient-primary rounded-full p-[2px] flex items-center justify-center jewelry-sparkle overflow-hidden">
+                  <Image src="/Ramona-Logo.jpg" alt="Ramona Jewels" width={100} height={100} className="rounded-full"/>
+                </div>
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold font-playfair gradient-text">Ramona Jewels</span>
+                <span className="text-xl font-bold font-playfair gradient-text whitespace-nowrap">Mona's Kreashon</span>
                 <span className="text-xs text-muted-foreground -mt-1">Jewelry & Fragrances</span>
               </div>
             </Link>
@@ -87,7 +90,7 @@ export function Footer() {
           </div>
 
           {/* Links */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h3 className="font-semibold text-primary flex items-center space-x-2">
               <span>Jewelry</span>
             </h3>
@@ -100,9 +103,9 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
+          </div> */}
 
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h3 className="font-semibold text-primary flex items-center space-x-2">
               <span>Fragrances</span>
             </h3>
@@ -115,32 +118,34 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
+          </div> */}
 
-          <div className="space-y-4">
-            <h3 className="font-semibold text-primary">Support</h3>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-primary transition-colors text-sm">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 lg:gap-20">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-primary">Support</h3>
+              <ul className="space-y-2">
+                {footerLinks.support.map((link) => (
+                  <li key={link.name}>
+                    <Link href={link.href} className="text-muted-foreground hover:text-primary transition-colors text-sm">
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div className="space-y-4">
-            <h3 className="font-semibold text-primary">Company</h3>
-            <ul className="space-y-2">
-              {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-primary transition-colors text-sm">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-4">
+              <h3 className="font-semibold text-primary">Company</h3>
+              <ul className="space-y-2">
+                {footerLinks.company.map((link) => (
+                  <li key={link.name}>
+                    <Link href={link.href} className="text-muted-foreground hover:text-primary transition-colors text-sm">
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
