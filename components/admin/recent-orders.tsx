@@ -105,7 +105,7 @@ export function RecentOrders() {
                 <td className="py-4 px-4">
                   <Badge
                     variant="secondary"
-                    className={`${statusColors[status] ?? statusColors.pending} capitalize`}
+                    className={`${statusColors[status] ?? statusColors.pending} capitalize border-none`}
                   >
                     {status}
                   </Badge>
