@@ -20,6 +20,7 @@ import { useGetCategoriesQuery } from "@/store/api/categoriesApi"
 import { toServerImageUrl } from "@/lib/utils/imageUtils"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DropdownMenuArrow } from "@radix-ui/react-dropdown-menu"
+import { Loader } from "@/components/ui/loader"
 
 export default function AdminInventoryPage() {
   const { user, hydrated } = useAuth()
@@ -65,7 +66,6 @@ export default function AdminInventoryPage() {
   const [selectedType, setSelectedType] = useState<string>("all")
   const [selectedCategory] = useState("")
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all")
-  const [selectAction, setSelectAction] = useState<string>("")
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -179,8 +179,7 @@ export default function AdminInventoryPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading inventory...</p>
+            <Loader message="Loading inventory..." />
           </div>
         </div>
       </AdminLayout>

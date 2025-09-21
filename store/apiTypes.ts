@@ -100,6 +100,8 @@ export interface Product {
     inStock?: boolean
     isActive?: boolean
     sort?: string
+    // Allow admin views to include out-of-stock items explicitly
+    includeOutOfStock?: boolean
   }
 
 export interface OrderItem {
