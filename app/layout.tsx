@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "Ramona - Premium Jewelry & Fragrances",
   description: "Discover exquisite jewelry and luxury fragrances from world-renowned designers and perfumers",
   keywords: "jewelry, diamonds, gold, silver, perfume, fragrance, luxury, designer jewelry, engagement rings",
-  icons: '/Ramona-Logo.jpg'
+  icon: '/Ramona-Logo.jpg'
 }
 
 export default function RootLayout({
