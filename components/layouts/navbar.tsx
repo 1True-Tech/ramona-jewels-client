@@ -61,7 +61,7 @@ export function Navbar() {
           </div>
 
           {/* Search Bar */}
-          <div className="hidden lg:flex items-center space-x-4 flex-1 max-w-md mx-8">
+          {/* <div className="hidden lg:flex items-center space-x-4 flex-1 max-w-md mx-8">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -72,10 +72,10 @@ export function Navbar() {
                 className="pl-10 border border-primary focus:outline-none outline-none ring-0 ring-white"
               />
             </div>
-          </div>
+          </div> */}
 
           {/* Right Side Icons */}
-          <div className="flex items-center space-x-3 md:space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
             {/* Wishlist */}
             <Link href="/wishlist">
               <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">
@@ -149,11 +149,11 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t bg-background/95 backdrop-blur"
+            className="md:hidden border-t border-primary bg-background/95 backdrop-blur"
           >
             <div className="px-4 py-4 space-y-4">
               {/* Mobile Search */}
-              <div className="relative">
+              {/* <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
@@ -162,7 +162,7 @@ export function Navbar() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 border-primary/20 outline-none ring-white"
                 />
-              </div>
+              </div> */}
 
               {/* Mobile Navigation */}
               <div className="space-y-1">
@@ -189,8 +189,7 @@ export function Navbar() {
                     onClick={() => setIsOpen(false)}
                   >
                     <div className="flex items-center gap-2">
-                      <Handbag className="h-4 w-4" />
-                      Orders
+                     My Orders
                     </div>
                   </Link>
                 )}
@@ -218,9 +217,9 @@ export function Navbar() {
 
               {/* Mobile Auth */}
               {!user && (
-                <div className="flex space-x-2 pt-4 border-t mt-2">
+                <div className="flex space-x-2 pt-4 border-t border-primary mt-2">
                   <Link href="/auth/login" className="flex-1">
-                    <Button variant="outline" className="w-full bg-transparent border-primary/20">
+                    <Button variant="outline" className="w-full bg-transparent border-primary text-primary">
                       Login
                     </Button>
                   </Link>
