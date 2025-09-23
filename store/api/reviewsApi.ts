@@ -49,6 +49,11 @@ export const reviewsApi = createApi({
       providesTags: (result, error, arg) => [{ type: 'Reviews', id: arg }],
       transformResponse: (res: { success: boolean; data: Review[] }) => res.data,
     }),
+    // Random reviews across all products, limit default 3
+    getRandomReviews: builder.query<Review[], number | void>({
+      query: (limit = 3) => `/reviews/random?limit=${limit}`,
+      transformResponse: (res: { success: boolean; data: Review[] }) => res.data,
+    }),
     createReview: builder.mutation<Review, { productId: string; rating: number; comment: string; name?: string }>({
       query: ({ productId, ...body }) => ({
         url: `/${productId}/reviews`,
@@ -61,4 +66,4 @@ export const reviewsApi = createApi({
   }),
 })
 
-export const { useGetReviewsByProductQuery, useCreateReviewMutation } = reviewsApi
+export const { useGetReviewsByProductQuery, useCreateReviewMutation, useGetRandomReviewsQuery } = reviewsApi
